@@ -120,6 +120,6 @@ async def check_status_of_registration(message: Message) -> tuple[str, bool]:
     if not expired_timestamp:
         return f"<b>KasperScalper_bot</b>\n{user_message2}", False
     elif expired_timestamp < date_time:
-        return f"Ваша регистрация закончилась – Зарегистрирован до: {expired_timestamp}\nСвяжитесь с @ElzaStarLight\n\n<b>После подтверждения оплаты, жми ➡️  /registration</b>\n", False
+        return f"Ваша регистрация закончилась – Зарегистрирован до: {expired_timestamp}\nСвяжитесь с @AlisaStrange\n\n<b>После подтверждения оплаты, жми ➡️  /registration</b>\n", False
     else:
         return f"Регистрация до – {expired_timestamp}\nПополните свой спотовый счёт на Mexc.com USDT для торговли.\n\nНачинайте, торговать – жми\nМеню - /parameters \n СТАРТ - /run_forrest_run", True
