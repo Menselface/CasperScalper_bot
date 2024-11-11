@@ -1,0 +1,13 @@
+mexc-api
+aiogram
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+pymexc
+pytz
+loguru
+httpx
+apscheduler
+python-dotenv==1.0.1
+
+# pip install -r requirements.txt
+# .venv\Scripts\activate
