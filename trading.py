@@ -15,6 +15,7 @@ from aiogram import Bot
 import logging
 import asyncio
 
+from mexc_api.common.enums import Side
 from mexc_api.common.exceptions import MexcAPIError
 from websocket import WebSocketConnectionClosedException
 
@@ -64,7 +65,7 @@ async def notify_admin(user_id, error_msg, bot: Bot):
             await bot.send_document(
                 chat_id=admin_id,
                 document=user_agreements,
-                caption=f"❗️ У пользователя {user_id} произошла ошибка. ❗️\nОшибка: {error_msg}\nЛоги за последние два дня прикреплены.")
+                caption=f"❗️ У пользователя {user_id} произошла ошибка. ❗️\nОшибка: {error_msg}\nЛоги прикреплены.")
             
         except Exception as e:
             logger.critical(f"Не могу скинуть файл {e} ")
@@ -86,7 +87,7 @@ async def handle_autobuy(message: Message, bot: Bot):
     account_spot_conn = CreateSpotConn_(user_api_keys, user_secret_key)
     s = account_spot_conn.get_account_info_()
     if 'Api key info invalid' in s:
-        await bot.send_message(user_id, f'Ошибка в апи ключах, сообщите в поддержку @romaknyazeff.')
+        await bot.send_message(user_id, f'Ошибка в апи ключах, сообщите в поддержку @AlisaStrange.')
         logger.warning(f"{user_id} Ошибка в апи ключах - {user_api_keys}, {user_secret_key}")
         await notify_admin(user_id, str(s), bot)
         is_working.remove_user(user_id)
