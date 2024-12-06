@@ -1,12 +1,15 @@
-from mexc_api.common.enums import OrderType
+from pprint import pprint
+
+from mexc_api.common.enums import Side, OrderType
 from mexc_api.spot import Spot
+from mexc_api.spot.endpoints._market import _Market
 import asyncio
 
 
 class CreateSpotConn:
-    def __init__(self, api_key, api_secret):
+    def __init__(self, api_key, api_secret, symbol: str = "KASUSDT"):
         self.spot_client = Spot(api_key=api_key, api_secret=api_secret)
-        self.symbol = "KASUSDT"
+        self.symbol = symbol
         self.total_after_sale = None
         self.total_after_sale_Kass = None
         self.total_free_usdt = None
@@ -37,6 +40,7 @@ class CreateSpotConn:
     def open_orders(self):
         """Получение текущих открытых ордеров."""
         return self.spot_client.account.get_open_orders(self.symbol)
+    
     
     def open_new_order(self, side, order_type: OrderType = OrderType.MARKET, quantity: str = None,
                        quote_order_quantity: str = '5', price: str = None, client_order_id: str | None = None):
@@ -84,3 +88,17 @@ class CreateSpotConn:
             orders = self.open_orders()
             print(f"Открытые ордера: {orders}")
             await asyncio.sleep(5)
+
+
+api_key = "mx0vgl2RfS79ubslmx"
+api_secret = "23879388919a4c8fa83d800c6700bc2b"
+
+
+async def main():
+    http_mexc = CreateSpotConn(api_key, api_secret)
+    s = http_mexc.get_last_trades()
+    pprint(s)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

@@ -17,4 +17,4 @@ async def handle_subs(message: Message, bot: Bot):
         return
     registered_to = await get_registered_to(user_id)
     registered_to = registered_to.strftime('%d.%m.%Y, %H-%M')
-    await message.answer(f"Ваша подписка действует до {registered_to}\nДля продления свяжитесь с @AlisaStrange").as_(bot)
+    await message.answer(f"Ваша подписка действует до <b>{registered_to}</b>\n\n➡️ <a href='https://t.me/TradingForAllEasy/14'>[Тарифы]</a>\nКошелек для оплаты USDT ❗TRC20❗:\n\n<code>TXjBKZSMXyqsyBX7AL9GHhHpvo6oNN4iWt</code>\n\n⬆️ ️Нажми чтобы скопировать ⬆️\n\nСбросьте данные об оплате - @RomaKnyazeff").as_(bot)

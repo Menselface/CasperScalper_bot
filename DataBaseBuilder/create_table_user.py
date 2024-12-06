@@ -2,7 +2,6 @@ import asyncio
 
 from DataBaseAsync import *
 
-
 create_table_query = """
     CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,  -- просто номер по порядку
@@ -21,6 +20,7 @@ create_table_query = """
         commission_percent REAL DEFAULT 0.02,  -- Процент комиссии биржи
         message TEXT,  -- запасная графа
         is_admin BOOLEAN DEFAULT false,  -- запасная графа
+        info_no_usdt INTEGER DEFAULT 0,
         reset_autobuy INTEGER DEFAULT 0, -- запасная графа
         stop_buy INTEGER DEFAULT 0
     );

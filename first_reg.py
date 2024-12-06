@@ -1,15 +1,18 @@
-from aiogram.filters import Command, StateFilter
+import json
+from datetime import datetime
+
+from aiogram import Router, Bot, F, types
+from aiogram.filters import StateFilter
+from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
+from aiogram.types import Message
 from aiogram.utils.serialization import deserialize_telegram_object_to_python
 
-from db import *
-from datetime import datetime
-from aiogram import Router, Bot
-from aiogram.types import Message
-from aiogram.fsm.context import FSMContext
-import json
-
+from all_mexc_methods.AccountMexc import AccountMexcMethods
 from config import ADMIN_ID
+from db import *
+from keyboards import trial_keyboard
+
 registration_states_router = Router()
 
 
@@ -29,14 +32,14 @@ async def handle_start(message: Message, bot: Bot):
     text, status_of_expired = await check_status_of_registration(message)
     access_key = await get_access_key(user_id)
     message_json = json.dumps(deserialize_telegram_object_to_python(message))
-
+    
     if message.from_user.first_name:
         first_name = message.from_user.first_name
     if message.from_user.last_name:
         last_name = message.from_user.last_name
     if message.from_user.username:
         username = f'@{message.from_user.username}'
-
+    
     if not await user_exist(user_id):
         await add_user(user_id, first_name, last_name, username, date_time, specific_date)
         admin_message = (
@@ -45,8 +48,9 @@ async def handle_start(message: Message, bot: Bot):
             f"Имя: {first_name}\n"
             f"Имя пользователя: {username}"
         )
+        await message.answer(text, parse_mode='HTML', reply_markup=trial_keyboard())
         await bot.send_message(ADMIN_ID, admin_message, parse_mode='HTML')
-        await message.answer(text, parse_mode='HTML')
+        await bot.send_message(ADMIN_ID2, admin_message, parse_mode='HTML')
         await set_first_message(user_id, message_json)
     else:
         timestamp = await get_timestamp_of_registration(user_id)
@@ -54,7 +58,7 @@ async def handle_start(message: Message, bot: Bot):
         if not access_key:
             await message.answer("Для начала регистрации введи /registration", parse_mode='HTML')
             return
-
+        
         await bot.send_message(user_id, user_message, parse_mode='HTML')
         await message.answer(text, parse_mode='HTML')
 
@@ -70,17 +74,41 @@ async def handle_registration(message: Message, state: FSMContext):
         await message.answer(
             "Добро пожаловать. Следуйте инструкции ниже:\n"
             "Сгенерируйте на бирже MEXC.COM в своем личном кабинете API ключи ",
+            parse_mode='HTML',
+            # добавил это, чтобы небыло превью
             disable_web_page_preview=True
         )
-
+        
         await message.answer(
             "<b>Введи Access Key (начинается на mx…):</b>",
             parse_mode='HTML'
         )
-
+        
         await state.set_state(RegistrationStates.access_key_state)
     else:
         await message.answer(text, parse_mode='HTML')
+
+
+@registration_states_router.callback_query(F.data.startswith('set_trial_promo'))
+async def set_trial_for_user(callback_query: types.CallbackQuery, state: FSMContext, bot: Bot):
+    user_id = callback_query.from_user.id
+    user_first_trial = await user_get_any(user_id, trial_promo="trial_promo")
+    today = datetime.today()
+    if user_first_trial:
+        await bot.send_message(
+            chat_id=user_id,
+            text="Ваш пробный период уже был активирован ранее\n\n"
+        )
+        return
+    today = datetime.today()
+    trial_period = (today + timedelta(days=7)).replace(hour=23, minute=59, second=0, microsecond=0)
+    await user_update(user_id, registered_to=trial_period)
+    await bot.send_message(
+        chat_id=user_id,
+        text="Пробный период активирован! 🎉\n \n <b>Введи Access Key (начинается на mx…):</b>"
+    )
+    await user_update(user_id, trial_promo=True)
+    await state.set_state(RegistrationStates.access_key_state)
 
 
 @registration_states_router.message(StateFilter(RegistrationStates.access_key_state))
@@ -93,33 +121,44 @@ async def handle_access_key(message: Message, state: FSMContext):
 
 
 @registration_states_router.message(StateFilter(RegistrationStates.secret_key_state))
-async def handle_secret_key(message: Message, state: FSMContext):
+async def handle_secret_key(message: Message, state: FSMContext, bot: Bot):
     text, _ = await check_status_of_registration(message)
     user_id = message.from_user.id
+    username = message.from_user.username or user_id
     await set_secret_key(user_id, message.text.strip())
     await state.clear()
-    await message.answer(text, parse_mode='HTML')
+    user_api_keys = await get_access_key(user_id)
+    user_secret_key = await get_secret_key(user_id)
+    account_spot_conn = AccountMexcMethods(user_api_keys, user_secret_key)
+    s = account_spot_conn.get_account_info_()
+    if 'Api key info invalid' in s:
+        admin_message = f"Пользователь @{username} ввел некоректные ключи при регистрации"
+        await bot.send_message(user_id, f'Ошибка в апи ключах, сообщите в поддержку @AlisaStrange.')
+        await bot.send_message(ADMIN_ID, admin_message, parse_mode='HTML')
+    else:
+        await message.answer(text, parse_mode='HTML')
 
 
 async def check_status_of_registration(message: Message) -> tuple[str, bool]:
     """Я добавил эту функцию для проверки статуса во всех остальных хендлерах.
         Если возвращается False, пользователю будут доступны только 'Старт' и 'Регистрация'.
     """
-
+    
     user_id = message.from_user.id
     expired_timestamp = await get_timestamp_end_registration(user_id)
     timestamp = await get_timestamp_of_registration(user_id)
-    date_time = datetime.now()
+    date_time = datetime.datetime.now()
     date_time = date_time.replace(second=0, microsecond=0)
     user_message2 = (
         f"Привет, {message.from_user.first_name}.\n\n"
-        f"<b>Полная информация по боту:</b>\n"
-        f"<b>После подтверждения оплаты, жми ➡️ /registration</b>\n"
+        f"«Я осознаю все риски торговли криптовалютой, принимаю их на себя и понимаю, что могу стать холдером криптовалюты»\n"
+        f"Активируя тестовый период, я подтверждаю своё согласие и готов торговать с помощью Бота\n"
+        f"⬇️⬇️⬇️\n\n"
     )
-
+    
     if not expired_timestamp:
-        return f"<b>KasperScalper_bot</b>\n{user_message2}", False
+        return f"<b>Infinity Bot Pro</b>\n\n{user_message2}", False
     elif expired_timestamp < date_time:
-        return f"Ваша регистрация закончилась – Зарегистрирован до: {expired_timestamp}\nСвяжитесь с @AlisaStrange\n\n<b>После подтверждения оплаты, жми ➡️  /registration</b>\n", False
+        return f"Ваша регистрация закончилась – Зарегистрирован до: {expired_timestamp}\nСвяжитесь с поддержкой ➡️ @AlisaStrange\n\n<b>После ПОДТВЕРЖДЕНИЯ оплаты, жми ➡️  /registration  ⬅️</b>\n", False
     else:
-        return f"Регистрация до – {expired_timestamp}\nПополните свой спотовый счёт на Mexc.com USDT для торговли.\n\nНачинайте, торговать – жми\nМеню - /parameters \n СТАРТ - /run_forrest_run", True
+        return f"Регистрация до – {expired_timestamp}\nПополните свой спотовый счёт на Mexc.com USDT для торговли.\n\nНачинайте, торговать – жми\nМеню - /parameters и СТАРТ - /trade", True

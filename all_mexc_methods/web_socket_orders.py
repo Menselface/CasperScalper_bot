@@ -1,4 +1,7 @@
+
 from pymexc import spot
+import time
+import threading
 from queue import Queue
 
 
@@ -36,3 +39,17 @@ class WebSocketLCientOrders:
 
     def is_working(self):
         return self.websocket_working
+#
+# api_key = "mx0vglp2mmtTvV1atO"
+# api_secret = "d10007277f4e462bb43bd9f59472d02e"
+#
+# ws_connection = WebSocketLCientOrders(api_key, api_secret)
+# threading.Thread(target=ws_connection.start())
+#
+#
+# Основной цикл для поддержания подключения
+#
+# while True:
+#     last_order_id, status, type = ws_connection.last_order()
+#     print(f"Last order ID: {last_order_id}, Status: {status}")
+#     time.sleep(1)

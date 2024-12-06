@@ -1,10 +1,8 @@
 import asyncio
-#
-from DataBaseAsync import *
-
+from config import db_async
 
 create_table_query = """
-    CREATE TABLE IF NOT EXISTS orders (
+    CREATE TABLE IF NOT EXISTS sui_usdt_orders (
         id SERIAL PRIMARY KEY,  -- просто номер по порядку
         telegram_id_Market BIGINT NOT NULL,  -- Идентификатор пользователя в Telegram
         order_id TEXT UNIQUE,
@@ -23,15 +21,14 @@ create_table_query = """
         Balance_Total REAL,
         Orders_In_Progress REAL,
         KASPA_In_Orders REAL,
-        Currency_for_Trading REAL,
-    );
-    """
+        Currency_for_Trading REAL
+    )"""
 
 
 
-# async def main():
-#     await db_async.connect()
-#     await db_async.execute(create_table_query)
-#     await db_async.disconnect()
+async def main():
+    await db_async.connect()
+    await db_async.execute(create_table_query)
+    await db_async.disconnect()
 
-# asyncio.run(main())
+asyncio.run(main())

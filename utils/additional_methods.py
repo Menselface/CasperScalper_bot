@@ -1,53 +1,29 @@
-import asyncio
 import datetime
+import os
+import shutil
 
 import pytz
+from aiogram import Bot
+from aiogram.types import FSInputFile
+from loguru import logger
 
-from db import get_all_open_sell_orders
 from all_mexc_methods.mexc_methods import CreateSpotConn
-from db import get_secret_key, get_access_key
+from config import PAIR_TABLE_MAP
+from db import get_all_open_sell_orders, get_all_admins
 from db import get_all_open_sell_orders_autobuy
-
-
-class AutoBuy:
-    def __init__(self):
-        self.is_working = False
-        self.websocket_work = False
-        self.user_autobuy_status = set()
-        self.double_user = {}
-    
-    def checker(self):
-        return self.is_working
-    
-    def checker_of_websockets(self):
-        return self.websocket_work
-    
-    def add_user_session(self, user_id):
-        if user_id not in self.user_autobuy_status:
-            self.user_autobuy_status.add(user_id)
-            print(self.user_autobuy_status)
-    
-    def remove_user(self, user_id):
-        self.user_autobuy_status.discard(user_id)
-        
-    def user_real_autobuy_checker(self, user_id):
-        if user_id in self.user_autobuy_status:
-            return True
-        return False
+from db import get_secret_key, get_access_key
+from trading.session_manager import manager_kaspa, manager_btc
 
 
 async def check_user_last_autobuy_for_reset(user_id):
     all_data_from_db = await get_all_open_sell_orders_autobuy(user_id, 1)
     sorted_records = sorted(all_data_from_db, key=lambda x: x['transacttimebuy'], reverse=True)
-    print(sorted_records[0])
 
 
 async def sell_orders_checker(user_id: int, actual: str):
-    # actual = 'C02__454843825987276800037'
     res = await get_all_open_sell_orders(int(user_id), actual)
     for result in res:
         if result[0] == actual:
-            # print(result[0])
             return result[0]
 
 
@@ -85,7 +61,6 @@ async def check_autobuy(user_id, selected_id):
         if row['order_id_limit'] == selected_id:
             result = row['order_id_limit']
     if result:
-        print('True')
         return True
     return False
 
@@ -95,11 +70,127 @@ async def update_result_if_have_order_autobuy(user_id):
     result = {'actual_order': None, 'avg_price': None}
     if len(sorted_records) > 0:
         sorted_records = sorted_records[0]
-        print(result)
         result.update({'actual_order': sorted_records['order_id_limit'], 'avg_price': sorted_records['priceorderbuy']})
     return result
 
+async def create_logs():
+    LOGS_DIR = "logs"
+    if os.path.exists(LOGS_DIR):
+        shutil.rmtree(LOGS_DIR)
+    user_log_file = f"{LOGS_DIR}/logers.log"
+    if not os.path.exists(LOGS_DIR):
+        os.makedirs(LOGS_DIR)
+    if not os.path.exists(user_log_file):
+        logger.add(user_log_file, rotation="10 MB", retention="5 days", compression="gz", level="INFO")
 
-async def remove_user_from_is_working_status(user_id, is_working):
-    is_working.is_working = False
-    is_working.remove_user(user_id)
+async def notify_admin(user_id, error_msg, bot: Bot):
+    log_file = f'logs/logers.log'
+    temp_log_file = f'logs/logers_сopy.log'
+    shutil.copy(log_file, temp_log_file)
+    user_agreements = FSInputFile('logs/logers_сopy.log', filename='logers_сopy.log')
+    all_admins = await get_all_admins()
+    for admin_id in all_admins:
+        try:
+            await bot.send_document(
+                chat_id=admin_id,
+                document=user_agreements,
+                caption=f"❗️ У пользователя {user_id} произошла ошибка. ❗️\nОшибка: {error_msg}\nЛоги за последние два дня прикреплены.")
+        
+        except Exception as e:
+            logger.critical(f"Не могу скинуть файл {e} ")
+    os.remove(temp_log_file)
+
+
+def safe_format(value, precision):
+    try:
+        return f"{float(value):.{precision}f}"
+    except (ValueError, TypeError):
+        logger.warning(f"Ошибка при форматировании значения: {value}")
+        return None
+    
+
+def user_message_returner(
+                            qnty_for_sell: float,
+                            price_to_sell: float,
+                            total_after_sale: float,
+                            fee_limit_order: float,
+                            pair: str
+                        ):
+    if pair == "BTCUSDC":
+        user_message = f"<b>ПРОДАНО:</b>\n" \
+                       f"{safe_format(qnty_for_sell, 6)} {pair[:-4]} по {safe_format(price_to_sell, 1)} {pair[-4:]}\n" \
+                       f"<b>Получено:</b> {safe_format(total_after_sale, 2)} {pair[-4:]}\n" \
+                       f"<b>ПРИБЫЛЬ:</b> {safe_format(fee_limit_order, 4)} {pair[-4:]}\n"
+    else:
+        user_message = f"<b>ПРОДАНО:</b>\n" \
+                       f"{safe_format(qnty_for_sell, 1)} {pair[:-4]} по {safe_format(price_to_sell, 6)} {pair[-4:]}\n" \
+                       f"<b>Получено:</b> {safe_format(total_after_sale, 2)} {pair[-4:]}\n" \
+                       f"<b>ПРИБЫЛЬ:</b> {safe_format(fee_limit_order, 4)} {pair[-4:]}\n"
+    return user_message
+
+
+def user_buy_message_returner(
+        qnty_for_sell: float,
+        avg_price: float,
+        spend_in_usdt_for_buy: float,
+        price_to_sell: str,
+        pair
+):
+    if pair == "BTCUSDC":
+        user_message = (
+            f"<b>КУПЛЕНО:</b>\n"
+            f"{safe_format(qnty_for_sell, 6)} {pair[:-4]} по {safe_format(avg_price, 1)} {pair[-4:]}\n"
+            f"Потрачено - {safe_format(spend_in_usdt_for_buy, 1)} {pair[-4:]}\n"
+            f"<b>ВЫСТАВЛЕНО:</b>\n"
+            f"{safe_format(qnty_for_sell, 6)} {pair[:-4]} по {safe_format(price_to_sell, 2)} {pair[-4:]}\n"
+        )
+    else:
+        user_message = (
+            f"<b>КУПЛЕНО:</b>\n"
+            f"{safe_format(qnty_for_sell, 6)} {pair[:-4]} по {safe_format(avg_price, 1)} {pair[-4:]}\n"
+            f"Потрачено - {safe_format(spend_in_usdt_for_buy, 1)} {pair[-4:]}\n"
+            f"<b>ВЫСТАВЛЕНО:</b>\n"
+            f"{safe_format(qnty_for_sell, 6)} {pair[:-4]} по {safe_format(price_to_sell, 2)} {pair[-4:]}\n"
+        )
+    
+    return user_message
+
+
+def format_symbol(symbol: str) -> str:
+    for quote in ["USDT", "USDC"]:
+        if symbol.endswith(quote):
+            base = symbol[:-len(quote)]
+            return f"<b>{base}/{quote}</b>"
+    return symbol
+
+def format_symbol_for_keyboards(symbol: str) -> str:
+    for quote in ["USDT", "USDC"]:
+        if symbol.endswith(quote):
+            base = symbol[:-len(quote)]
+            return f"{base}/{quote}"
+    return symbol
+
+
+async def process_order_result(result):
+    if not result:
+        return None
+
+    record = result[-1]
+    
+    return {
+        "avg_price": record["priceorderbuy"],
+        "actual_order": record["order_id_limit"]
+    }
+
+async def user_active_pair(user_id, pair):
+    if pair == "KASUSDT":
+        return manager_kaspa.is_active(user_id)
+    else:
+        return manager_btc.is_active(user_id)
+    
+    
+def find_pair(symbol):
+    for key in PAIR_TABLE_MAP:
+        if key.startswith(symbol):
+            return key
+    return None

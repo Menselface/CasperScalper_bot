@@ -6,9 +6,8 @@ from loguru import logger
 
 from db import status_of_ending_of_registration
 
-@logger.catch()
+
 async def final_of_registration_date(bot: Bot):
-    logger.info("Проверка конца регистраций для пользователей запущенна")
     months_translation = {
         'January': 'Января',
         'February': 'Февраля',

@@ -9,7 +9,10 @@ from loguru import logger
 
 from db import is_admin_checker, set_reset_autobuy, all_users_with_reset_status, get_first_message
 from keyboards import admin_keyboard
-from trading import is_working, handle_autobuy
+from trading.session_manager import manager_sui, manager_pyth
+from trading.start_trade import user_restart_from_admin_panel
+from trading.trading_btc import manager_btc
+from trading.trading_kas import manager_kaspa
 
 admin_router = Router()
 
@@ -37,14 +40,9 @@ async def refresh_all_users(message: Message, bot: Bot, state: FSMContext):
         message_id=message_to_edit,
         text=(
             "Обновимся?\n"
-            "Команда <b>ОБНОВИТЬ</b> переведет всех, у кого запущен автобай, в статус 1.\n"
-            "Команда <b>КОЛБАСА</b> запустит автоматически автобай всем пользователям со статусом 1.\n\n"
-            "<b>Порядок обновления:</b>\n"
-            "1. На сервер залей обновление с ГитХаб — (дай команду <code>git pull origin master</code>)\n"
-            "2. Нажми кнопку <b>ОБНОВИТЬ</b> ⬇️\n"
-            "3. Останови Бота на сервере — <code>Ctrl+C</code>\n"
-            "4. Запусти Бота — <code>python3 main.py</code>\n"
-            "5. Нажми <b>КОЛБАСА</b>"
+            "Команда <b>ОБНОВИТЬ</b> переведет всех, у кого запущена торговля, в статус 1.\n"
+            "Команда <b>КОЛБАСА</b> запустит всех пользователям со статусом 1.\n\n"
+            "НАЧИНАЙ - жми <b>Обновить</b>"
         ),
         reply_markup=admin_keyboard(level=1))
     await state.update_data(message=mes.message_id)
@@ -69,15 +67,19 @@ async def refresh_all_users(message: Message, bot: Bot):
     all_admins = await is_admin_checker(user_id)
     if not user_id in all_admins:
         return
-    active_users = is_working.user_autobuy_status
-    logger.info(f"{active_users} переведены в статус 1")
+    active_users_btc = manager_btc.sessions
+    active_users_kaspa = manager_kaspa.sessions
+    active_users_sui = manager_sui.sessions
+    active_users_pyth = manager_pyth.sessions
+    hello_everybody = active_users_kaspa | active_users_btc | active_users_sui | active_users_pyth
+    logger.info(f"{hello_everybody} переведены в статус 1")
     await bot.send_message(user_id,
-                           "1. К обновлению готов!\n"
+                           f"1. К обновлению готов!\n{hello_everybody.keys()} переведены в статус 1\n\n"
                            "2. Останови Бота на сервере:\n"
                            "➡️ CTRL+C или CTRL+Z"
                            )
 
-    for user in active_users:
+    for user in hello_everybody.keys():
         await set_reset_autobuy(user, 1)
 
 
@@ -95,11 +97,10 @@ async def rstart_autobuy(message: Message, bot: Bot):
     
     for user in active_users:
         res = await get_first_message(user)
-        task = asyncio.create_task(handle_autobuy(res, bot))
+        task = asyncio.create_task(user_restart_from_admin_panel(res, bot))
         tasks.append(task)
-    
-    await asyncio.gather(*tasks)
     await bot.send_message(user_id, "Все пользователи запущены!")
+    await asyncio.gather(*tasks)
 
 
 @admin_router.callback_query(F.data == 'get_logs')

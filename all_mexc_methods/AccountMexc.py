@@ -1,21 +1,40 @@
-import asyncio
-import time
-import hmac
 import hashlib
-
-import requests
+import hmac
+import time
 from urllib.parse import urlencode
+
 import httpx
+import requests
+from loguru import logger
 
 from config import BASE_URL
 
 
 class AccountMexcMethods:
-    def __init__(self, api_key: str, secret_key: str, symbol: str = 'KASUSDT', recv_window: int = 5000):
+    def __init__(self, api_key: str, secret_key: str, symbol: str = 'KASUSDT', recv_window: int = 50000):
         self.api_key = api_key
         self.secret_key = secret_key
         self.symbol = symbol
         self.recv_window = recv_window
+        
+        self.free_kas = 0
+        self.total_after_sale = 0
+        self.total_after_sale_Kass = 0
+        self.total_free_usdt = 0
+        self.usdt_locked = 0
+        self.locked = 0
+        self.total_free_usdc = 0
+        self.total_after_sale_usdc = 0
+        self.usdc_locked = 0
+        self.free_btc = 0
+        self.total_after_sale_btc = 0
+        self.locked_btc = 0
+        self.free_sui = 0
+        self.total_after_sale_sui = 0
+        self.locked_sui = 0
+        self.free_pyth = 0
+        self.locked_pyth = 0
+        self.total_after_sale_pyth = 0
     
     def _generate_signature(self, params: dict) -> str:
         query_string = urlencode(params)
@@ -31,7 +50,6 @@ class AccountMexcMethods:
             'timestamp': int(time.time() * 1000)
         }
         
-        # Генерация подписи
         params['signature'] = self._generate_signature(params)
         
         headers = self._get_headers()
@@ -44,12 +62,12 @@ class AccountMexcMethods:
             else:
                 return None
         except ValueError:
-            # Обработка случая, если не удается получить корректный JSON
+            logger.warning("не удается получить корректный JSON")
             return None
     
-    async def get_open_orders(self):
+    async def get_open_orders(self, symbol: str = "KASUSDT"):
         params = {
-            'symbol': self.symbol,
+            'symbol': symbol,
             'recvWindow': self.recv_window,
             'timestamp': int(time.time() * 1000)
         }
@@ -66,16 +84,15 @@ class AccountMexcMethods:
                 if len(result) >= 1:
                     return result
                 else:
-                    print('0')
                     return '0'
             else:
                 return None
         except ValueError:
             return None
     
-    async def get_order_status(self, order_id: str = None, orig_client_order_id: str = None):
+    async def get_order_status(self, order_id: str = None, orig_client_order_id: str = None, symbol: str = "KASUSDT"):
         params = {
-            'symbol': self.symbol,
+            'symbol': symbol,
             'recvWindow': self.recv_window,
             'timestamp': int(time.time() * 1000)
         }
@@ -95,11 +112,14 @@ class AccountMexcMethods:
             result = res.json()
             if 'orderId' in result:
                 return result
+            elif "must be sent, but both were empty/null!" in  result['msg']:
+                return "Order lost in the echo"
+            
             else:
-                print('Order not found or an error occurred.')
                 return None
+            
         except ValueError:
-            print('Failed to decode JSON response.')
+            logger.info('Failed to decode JSON response.')
             return None
     
     async def get_avg_price(self):
@@ -132,85 +152,96 @@ class AccountMexcMethods:
             try:
                 res = await client.get(url, headers=headers, params=params)
                 account = res.json()
-                
-                # Получение средней цены актива
                 market_price = await self.get_avg_price()
-                
-                # Получение баланса USDT и расчет total_after_sale
-                self.total_free_usdt = float(account.get('balances')[0]['free'])
-                self.total_after_sale = (
-                        float(account.get('balances')[0]['free']) +
-                        float(account.get('balances')[0]['locked'])
-                )
-                
-                # Если есть больше одного актива в балансе, считаем total_after_sale_Kass
-                if len(account.get('balances')) > 1:
-                    self.total_after_sale_Kass = float(account.get('balances')[1]['free'])
-                    self.total_after_sale += (
-                                                     float(account.get('balances')[1]['free']) +
-                                                     float(account.get('balances')[1]['locked'])
-                                             ) * float(market_price['price'])
-                    self.locked = float(account.get('balances')[1]['locked'])
-                    self.usdt_locked = float(account.get('balances')[0]['locked'])
+                for balance in account.get('balances', []):
+                    asset = balance.get('asset')
+                    
+                    if asset == 'USDT':
+                        self.total_free_usdt = float(balance.get('free', 0))
+                        self.total_after_sale += (
+                                float(balance.get('free', 0)) +
+                                float(balance.get('locked', 0))
+                        )
+                        
+                        self.usdt_locked = float(balance.get('locked'))
+                    elif asset == "USDC":
+                        self.total_free_usdc = float(balance.get('free', 0))
+                        self.total_after_sale_usdc += (
+                                float(balance.get('free', 0)) +
+                                float(balance.get('locked', 0))
+                        )
+                        
+                        self.usdc_locked = float(balance.get('locked'))
+                        
+                    
+                    elif asset == 'KAS':
+                        self.free_kas = float(balance.get('free', 0))
+                        self.locked = float(balance.get('locked', 0))
+                        self.total_after_sale += (self.free_kas + self.locked) * float(market_price['price'])
+                        
+                    
+                    elif asset == 'SUI':
+                        self.free_sui = float(balance.get('free', 0))
+                        self.locked_sui = float(balance.get('locked', 0))
+                        self.total_after_sale_sui += (self.free_sui +  self.locked_sui) * float(market_price['price'])
+                        
+                    elif asset == 'BTC':
+                        self.free_btc = float(balance.get('free', 0))
+                        self.locked_btc = float(balance.get('locked'))
+                        self.total_after_sale_btc += (self.free_btc + self.locked_btc) * float(market_price['price'])
+                    
+                    elif asset == 'PYTH':
+                        self.free_pyth = float(balance.get('free', 0))
+                        self.locked_pyth = float(balance.get('locked'))
+                        self.total_after_sale_pyth += (self.free_pyth + self.locked_pyth) * float(market_price['price'])
+                       
                 
                 return account
             except (httpx.HTTPError, ValueError, IndexError):
                 return None
-
-
-class CreateSpotConn_(AccountMexcMethods):
-    def __init__(self, api_key, secret_key, symbol="KASUSDT"):
-        super().__init__(api_key, secret_key, symbol)
-        self.total_after_sale = None
-        self.total_after_sale_Kass = None
-        self.total_free_usdt = None
     
-    def get_avg_price(self):
-        """Получение средней цены актива через API mexc."""
-        url = f'{BASE_URL}/avgPrice'
+    async def get_all_orders(self, start_time: int = None, end_time: int = None, limit: int = 500):
+        
         params = {
             'symbol': self.symbol,
-            'timestamp': int(time.time() * 1000)
-        }
-        headers = self._get_headers()
-        res = requests.get(url, headers=headers, params=params)
-        try:
-            return res.json()
-        except ValueError:
-            return None
-    
-    def get_account_info_(self):
-        """Получение информации о балансе пользователя и расчет total_after_sale."""
-        url = f'{BASE_URL}/account'
-        params = {
             'recvWindow': self.recv_window,
-            'timestamp': int(time.time() * 1000)
+            'timestamp': int(time.time() * 1000),
+            'limit': min(limit, 1000)
         }
+        if start_time:
+            params['startTime'] = start_time
+        if end_time:
+            params['endTime'] = end_time
+        
         params['signature'] = self._generate_signature(params)
+        
         headers = self._get_headers()
         
-        res = requests.get(url, headers=headers, params=params)
-        msg = res.content
-        if "Api key info invalid" in str(msg):
-            return "Api key info invalid"
-        try:
-            acount = res.json()
-            market_price = self.get_avg_price()
-            
-            # Получение баланса USDT и расчет total_after_sale
-            self.total_free_usdt = float(acount.get('balances')[0]['free'])
-            self.total_after_sale = (
-                    float(acount.get('balances')[0]['free']) +
-                    float(acount.get('balances')[0]['locked'])
-            )
-            
-            if len(acount.get('balances')) > 1:
-                self.total_after_sale_Kass = float(acount.get('balances')[1]['free'])
-                self.total_after_sale += (
-                                                 float(acount.get('balances')[1]['free']) +
-                                                 float(acount.get('balances')[1]['locked'])
-                                         ) * float(market_price['price'])
-            
-            return acount
-        except (ValueError, IndexError):
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(f'{BASE_URL}/allOrders', headers=headers, params=params)
+                response.raise_for_status()
+                return response.json()  # Возвращаем JSON с результатом
+            except httpx.RequestError as exc:
+                logger.warning(f"HTTP запрос завершился ошибкой: {exc}")
+            except httpx.HTTPStatusError as exc:
+                logger.warning(f"Ошибка статуса HTTP: {exc.response.status_code}")
+            except ValueError:
+                logger.warning("Ошибка преобразования ответа в JSON")
             return None
+
+
+# api_key = "mx0vglp2mmtTvV1atO"
+# api_secret = "d10007277f4e462bb43bd9f59472d02e"
+#
+# async def main():
+#     mexc = AccountMexcMethods(api_key, api_secret, symbol="KASUSDT")
+#     start_time = int((time.time() - 24 * 60 * 60) * 1000)  # За последние 24 часа
+#     orders = await mexc.get_open_orders()
+#     if orders:
+#         for order in orders:
+#             pprint(order)
+#     print(len(orders))
+#
+# import asyncio
+# asyncio.run(main())

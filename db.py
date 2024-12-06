@@ -6,12 +6,64 @@ from aiogram.types import Message
 from asyncpg.pgproto.pgproto import timedelta
 from loguru import logger
 
-from config import db_async
-
+from config import db_async, PAIR_TABLE_MAP
 
 """
 Тут хранятся запросы в базу данных user table
 """
+
+async def user_update(telegram_id, **kwargs):
+    try:
+        if db_async.pool is None:
+            await db_async.connect()
+        
+        if not kwargs:
+            raise ValueError("No fields provided to update")
+        
+        set_clause = []
+        values = [telegram_id]  # Первый параметр — это telegram_id
+        
+        for index, (field, value) in enumerate(kwargs.items(), start=2):
+            set_clause.append(f"{field} = ${index}")
+            values.append(value)
+        
+        set_clause_str = ", ".join(set_clause)
+        
+        query = f"UPDATE users SET {set_clause_str} WHERE telegram_id = $1"
+        
+        await db_async.fetch(query, *values)
+        return True
+    
+    except Exception as e:
+        logger.info(e)
+        return False
+
+
+async def user_get_any(telegram_id, **kwargs):
+    try:
+        if db_async.pool is None:
+            await db_async.connect()
+        
+        if not kwargs:
+            raise ValueError("No fields provided to update")
+        
+        set_clause = []
+        values = [telegram_id]  # Первый параметр — это telegram_id
+        
+        for index, (field, value) in enumerate(kwargs.items(), start=2):
+            set_clause.append(f"{field}")
+            values.append(value)
+        
+        set_clause_str = " AND ".join(set_clause)
+        
+        query = f"SELECT {set_clause_str} FROM users  WHERE telegram_id = $1"
+        
+        res = await db_async.fetchrow(query, telegram_id)
+        return res[set_clause_str]
+    
+    except Exception as e:
+        logger.info(e)
+        return False
 
 
 async def user_exist(user_id):
@@ -26,7 +78,7 @@ async def user_exist(user_id):
         else:
             return False
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
 
 
 async def is_admin_checker(user_id):
@@ -37,7 +89,7 @@ async def is_admin_checker(user_id):
                                       user_id)
         return [record['telegram_id'] for record in result]
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
     
     
     
@@ -48,7 +100,7 @@ async def get_all_admins():
         result = await db_async.fetch('SELECT telegram_id FROM users WHERE is_admin = true')
         return [record['telegram_id'] for record in result]
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
         
         
 async def is_reset_status(user_id):
@@ -59,7 +111,7 @@ async def is_reset_status(user_id):
                                       user_id)
         return result
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
         
         
 
@@ -71,7 +123,16 @@ async def all_users_with_reset_status():
         result = await db_async.fetch('SELECT telegram_id FROM users WHERE reset_autobuy = 1')
         return [record['telegram_id'] for record in result]
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
+        
+async def all_users_with_registration_status():
+    try:
+        if db_async.pool is None:
+            await db_async.connect()
+        result = await db_async.fetch('SELECT telegram_id FROM users WHERE reset_autobuy = 1')
+        return [record['telegram_id'] for record in result]
+    except Exception as e:
+        logger.warning(e)
 
 
 async def add_user(user_id, first_name, last_name, username, date_time, specific_date):
@@ -83,7 +144,7 @@ async def add_user(user_id, first_name, last_name, username, date_time, specific
             user_id, first_name, last_name, username, date_time, specific_date
         )
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
 
 
 async def get_timestamp_of_registration(user_id):
@@ -93,7 +154,7 @@ async def get_timestamp_of_registration(user_id):
         res = await db_async.fetchval("""SELECT registered_at FROM users WHERE telegram_id = $1""", user_id)
         return res
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
 
 
 async def get_timestamp_end_registration(user_id):
@@ -103,7 +164,7 @@ async def get_timestamp_end_registration(user_id):
         res = await db_async.fetchval("""SELECT registered_to FROM users WHERE telegram_id = $1""", user_id)
         return res
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
 
 
 async def get_user_stop_buy_status(user_id):
@@ -113,7 +174,7 @@ async def get_user_stop_buy_status(user_id):
         res = await db_async.fetchval("""SELECT stop_buy FROM users WHERE telegram_id = $1""", user_id)
         return res
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
 
 
 async def set_access_key(user_id, access_key):
@@ -123,7 +184,7 @@ async def set_access_key(user_id, access_key):
         await db_async.fetch("""UPDATE users SET api_key = $2 WHERE telegram_id = $1 """, user_id, access_key)
         return True
     except Exception as e:
-        logger.warning(f"Exception in db {e}")
+        logger.warning(e)
         return False
     
 
@@ -167,7 +228,7 @@ async def set_first_message(user_id, message):
         await db_async.fetch("""UPDATE users SET message = $2 WHERE telegram_id = $1 """, user_id, message)
         return True
     except Exception as e:
-        logger.warning(f"Exception in db {e}")
+        logger.warning(e)
         return False
 
 async def set_reset_autobuy(user_id, status):
@@ -177,7 +238,7 @@ async def set_reset_autobuy(user_id, status):
         await db_async.fetch("""UPDATE users SET reset_autobuy = $2 WHERE telegram_id = $1 """, user_id, status)
         return True
     except Exception as e:
-        logger.warning(f"Exception in db {e}")
+        logger.warning(e)
         return False
 
 
@@ -188,7 +249,7 @@ async def set_secret_key(user_id, secret_key):
         await db_async.fetch("""UPDATE users SET secret_key = $2 WHERE telegram_id = $1 """, user_id, secret_key)
         return True
     except Exception as e:
-        logger.warning(f"Exception in db {e}")
+        logger.warning(e)
         return False
 
 
@@ -199,25 +260,8 @@ async def get_access_key(user_id):
         res = await db_async.fetchval("""SELECT api_key FROM users WHERE telegram_id = $1""", user_id)
         return res
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
 
-
-async def set_standart_user_params(user_id: int,
-                                   order_limit_by: float = 30.0,
-                                   percent_profit: float = 0.3,
-                                   autobuy_up_sec: int = 30,
-                                   auto_buy_down_perc: float = 1,
-                                   taker: float = 0.02):
-    try:
-        if db_async.pool is None:
-            await db_async.connect()
-        await db_async.fetch(
-            """UPDATE users SET order_limit_by = $2, percent_profit = $3, autobuy_up_sec = $4, auto_buy_down_perc = $5, commission_percent = $6 WHERE telegram_id = $1 """,
-            user_id, order_limit_by, percent_profit, autobuy_up_sec, auto_buy_down_perc, taker)
-        return True
-    except Exception as e:
-        logger.warning(f"Exception in db {e}")
-        return False
 
 
 async def get_secret_key(user_id):
@@ -227,7 +271,7 @@ async def get_secret_key(user_id):
         res = await db_async.fetchval("""SELECT secret_key FROM users WHERE telegram_id = $1""", user_id)
         return res
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
 
 
 async def get_await_time(user_id):
@@ -237,7 +281,7 @@ async def get_await_time(user_id):
         res = await db_async.fetchval("""SELECT autobuy_up_sec FROM users WHERE telegram_id = $1""", user_id)
         return res
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
 
 
 async def get_user_order_limit(user_id):
@@ -247,7 +291,7 @@ async def get_user_order_limit(user_id):
         res = await db_async.fetchval("""SELECT order_limit_by FROM users WHERE telegram_id = $1""", user_id)
         return res
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
 
 
 async def get_info_commission_percent(user_id):
@@ -257,7 +301,7 @@ async def get_info_commission_percent(user_id):
         res = await db_async.fetchval("""SELECT commission_percent FROM users WHERE telegram_id = $1""", user_id)
         return res
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
 
 
 async def get_info_percent_profit(user_id):
@@ -267,7 +311,7 @@ async def get_info_percent_profit(user_id):
         res = await db_async.fetchval("""SELECT percent_profit FROM users WHERE telegram_id = $1""", user_id)
         return res
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
 
 
 async def get_info_percent_auto_buy(user_id):
@@ -277,7 +321,7 @@ async def get_info_percent_auto_buy(user_id):
         res = await db_async.fetchval("""SELECT auto_buy_down_perc FROM users WHERE telegram_id = $1""", user_id)
         return res
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
 
 
 async def set_user_limit_order(user_id, user_limit_order):
@@ -288,7 +332,7 @@ async def set_user_limit_order(user_id, user_limit_order):
                              user_limit_order)
         return True
     except Exception as e:
-        logger.warning(f"Exception in db {e}")
+        logger.warning(e)
         return False
 
 
@@ -300,7 +344,7 @@ async def set_percent_profiit(user_id, percent_profiit):
                              percent_profiit)
         return True
     except Exception as e:
-        logger.warning(f"Exception in db {e}")
+        logger.warning(e)
         return False
 
 
@@ -311,7 +355,7 @@ async def set_autobuy_up_db(user_id, autobuy_up):
         await db_async.fetch("""UPDATE users SET autobuy_up_sec = $2 WHERE telegram_id = $1 """, user_id, autobuy_up)
         return True
     except Exception as e:
-        logger.warning(f"Exception in db {e}")
+        logger.warning(e)
         return False
 
 
@@ -323,7 +367,7 @@ async def set_autobuy_down_db(user_id, autobuy_down):
                              autobuy_down)
         return True
     except Exception as e:
-        logger.warning(f"Exception in db {e}")
+        logger.warning(e)
         return False
 
 
@@ -335,7 +379,7 @@ async def set_commission_percent(user_id, commission):
         await db_async.fetch("""UPDATE users SET commission_percent = $2 WHERE telegram_id = $1 """, user_id,
                              commission)
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
 
 
 """
@@ -359,7 +403,7 @@ async def set_order_buy_in_db(user_id, orderId, time_buy, qty_to_buy, price_orde
                                 side) VALUES($1, $2, $3, $4, $5, $6, $7, $8) """,
             user_id, orderId, time_buy, qty_to_buy, price_order_buy, total_purchace, autobuy, side)
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
 
 
 async def update_order_by_order_id(user_id: int, orderId: str, time_sell: datetime.datetime = None,
@@ -414,7 +458,7 @@ async def update_order_by_order_id(user_id: int, orderId: str, time_sell: dateti
                              currency_for_trading,
                              autobuy)
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
 
 async def update_all_not_autobuy(user_id, status):
     try:
@@ -427,7 +471,7 @@ async def update_all_not_autobuy(user_id, status):
                              user_id,
                              status)
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
 
 async def update_orderafter_sale_by_order_id(user_id: int, orderId: str,
                                              time_sell: datetime.datetime = None,
@@ -487,7 +531,7 @@ async def update_orderafter_sale_by_order_id(user_id: int, orderId: str,
                              currency_for_trading,
                              autobuy)
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
 
 
 async def get_buy_price(user_id, order_id):
@@ -499,24 +543,63 @@ async def get_buy_price(user_id, order_id):
             order_id)
         return res
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
+        
+async def spend_in_usdt_for_buy_order(user_id, order_id):
+    try:
+        if db_async.pool is None:
+            await db_async.connect()
+        res = await db_async.fetchval(
+            """SELECT totalamountonpurchace FROM orders WHERE telegram_id_market = $1 AND order_id_limit = $2  """, user_id,
+            order_id)
+        return res
+    except Exception as e:
+        logger.warning(e)
 
 
 async def delete_order_by_user_and_order_id(user_id: int, order_id: str):
     try:
-        # Проверяем, подключена ли база данных
         if db_async.pool is None:
             await db_async.connect()
         
-        # Выполняем запрос на удаление записи, основываясь на идентификаторах
         result = await db_async.fetch("""DELETE FROM orders WHERE telegram_id_market = $1 AND order_id_limit = $2""",
                                       user_id, order_id)
 
-        return True if result is None else False
     
     except Exception as e:
-        # В случае ошибки выводим сообщение
-        logger.warning(f"Exception in db {e}")
+        logger.warning(e)
+        return False
+
+
+async def delete_order_by_user_and_order_id_from_any_table(table_name, user_id: int, order_id_limit: str):
+    try:
+        if db_async.pool is None:
+            await db_async.connect()
+            
+        query = f"""DELETE FROM {table_name} WHERE telegram_id_market = $1 AND (order_id_limit = $2 OR order_id = $2)"""
+        
+        result = await db_async.fetch(query, user_id, order_id_limit)
+        return True
+    
+    
+    except Exception as e:
+        logger.warning(e)
+        return False
+
+
+async def delete_order_by_user_and_order_id_from_any_table_for_one_only_case(table_name, user_id: int, order_id_limit: str):
+    try:
+        if db_async.pool is None:
+            await db_async.connect()
+        
+        query = f"""DELETE FROM {table_name} WHERE telegram_id_market = $1 AND order_id = $2"""
+        
+        result = await db_async.fetch(query, user_id, order_id_limit)
+        return True
+    
+    
+    except Exception as e:
+        logger.warning(e)
         return False
 
 
@@ -531,7 +614,7 @@ async def get_all_open_sell_orders(user_id, order_id):
             order_id)
         return res
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
 
 
 async def get_all_open_sell_orders_autobuy(user_id, status):
@@ -545,8 +628,51 @@ async def get_all_open_sell_orders_autobuy(user_id, status):
             status)
         return res
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
+
+
+async def get_all_open_sell_orders_autobuy_from_any_table(user_id: int, pair: str, status: int):
+
+    user_id = int(user_id)
+    status = int(status)
+    
+    table_name = PAIR_TABLE_MAP.get(pair)
+    if not table_name:
+        raise ValueError(f"Unsupported pair: {pair}")
+    
+    try:
+        if db_async.pool is None:
+            await db_async.connect()
         
+        query = f"SELECT * FROM {table_name} WHERE telegram_id_market = $1 AND autobay = $2"
+        res = await db_async.fetch(query, user_id, status)
+        return res
+    
+    except Exception as e:
+        logger.warning(f"Error fetching data from table {table_name}: {e}")
+        return None
+
+
+async def get_all_open_sell_orders_autobuy_from_any_table_for_checker(user_id: int, pair: str):
+    user_id = int(user_id)
+    
+    table_name = PAIR_TABLE_MAP.get(pair)
+    if not table_name:
+        raise ValueError(f"Unsupported pair: {pair}")
+    
+    try:
+        if db_async.pool is None:
+            await db_async.connect()
+        
+        query = f"SELECT * FROM {table_name} WHERE telegram_id_market = $1 AND autobay IN (1, 9)"
+        res = await db_async.fetch(query, user_id)
+        return res
+    
+    except Exception as e:
+        logger.warning(f"Error fetching data from table {table_name}: {e}")
+        return None
+
+
 async def closed_orders_for_pin_message(user_id: int, status: int, now: datetime) -> tuple:
     user_id = int(user_id)
     status = int(status)
@@ -564,7 +690,7 @@ async def closed_orders_for_pin_message(user_id: int, status: int, now: datetime
             length += 1
         return sum_of_all_deals, length
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
         
 async def get_all_id_with_registered_to_status(today: datetime) -> list:
     try:
@@ -594,7 +720,7 @@ async def get_registered_to(user_id):
         res = await db_async.fetchval("""SELECT registered_to FROM users WHERE telegram_id = $1""", user_id)
         return res
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
         
 async def status_of_ending_of_registration(three_days_before: datetime, seven_day_after: datetime ) -> list:
     seven_day_after = seven_day_after - timedelta(seconds=5)
@@ -614,14 +740,12 @@ async def get_all_open_sell_orders_nine(user_id: int, status: int, current_price
         status = int(status)
         current_price = float(current_price)
         
-        # Рассчитываем границы диапазона (±3%)
         lower_bound = current_price * 0.97  # -3% от текущей цены
         upper_bound = current_price * 1.03  # +3% от текущей цены
         
         if db_async.pool is None:
             await db_async.connect()
         
-        # Обновляем SQL-запрос для фильтрации по диапазону цены
         query = """
             SELECT * FROM orders
             WHERE telegram_id_market = $1
@@ -647,7 +771,7 @@ async def get_all_open_sell_orders_for_statistic(user_id):
             """SELECT * FROM orders WHERE telegram_id_market = $1 """, user_id)
         return res
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
 
 
 async def get_orders_from_data(user_id, oreder_id):
@@ -659,4 +783,98 @@ async def get_orders_from_data(user_id, oreder_id):
             """SELECT * FROM orders WHERE telegram_id_market = $1 AND order_id_limit = $2 """, user_id, oreder_id)
         return res
     except Exception as e:
-       logger.warning(f"Exception in db {e}")
+        logger.warning(e)
+        
+async def get_totalamountonpurchace_from_any_table(table_name: str, order_id):
+    try:
+        if db_async.pool is None:
+            await db_async.connect()
+        query = f"""
+                SELECT totalamountonpurchace
+                FROM {table_name}
+                WHERE order_id_limit = $1
+                """
+        
+        res = await db_async.fetchrow(query, order_id)
+        return res["totalamountonpurchace"] if res else None
+    
+    except Exception as e:
+        logger.warning(f"Ошибка в get_totalamountonpurchace_from_any_table: {e}")
+
+
+async def get_order_id_limit_from_any_table(table_name: str,  user_id, order_id):
+    try:
+        if db_async.pool is None:
+            await db_async.connect()
+        query = f"""
+                SELECT *
+                FROM {table_name}
+                WHERE order_id_limit = $1 AND telegram_id_market = $2 AND autobay = 2
+                """
+        
+        res = await db_async.fetchrow(query, order_id, user_id)
+        return res
+    
+    except Exception as e:
+        logger.warning(f"Ошибка в get_totalamountonpurchace_from_any_table: {e}")
+        
+        
+async def update_order_after_sale_by_order_id_any_table(
+    table_name: str,  # Название таблицы
+    user_id: int,
+    order_id: str,
+    time_of_order_sell: str,
+    qnty_for_sell: float,
+    price_to_sell: float,
+    order_id_limit: str,
+    autobuy: int,
+    total_amount_after_sale: float,
+    feelimit: float,
+    balance_total: float,
+    orders_in_progress: int,
+    kaspa_in_orders: float,
+    currency_for_trading: float,
+):
+    """
+    Обновление данных ордера в указанной таблице.
+    """
+    query = f"""
+    UPDATE {table_name}
+    SET
+        transacttimesell = $1,
+        qtytosell = $2,
+        priceordersell = $3,
+        autobay = $4,
+        totalamountaftersale = $5,
+        feelimitorder = $6,
+        balance_total = $7,
+        orders_in_progress = $8,
+        kaspa_in_orders = $9,
+        currency_for_trading = $10
+    WHERE
+        telegram_id_market = $11 AND order_id_limit = $12
+    """
+    await db_async.execute(
+        query,
+        time_of_order_sell,
+        qnty_for_sell,
+        price_to_sell,
+        autobuy,
+        total_amount_after_sale,
+        feelimit,
+        balance_total,
+        orders_in_progress,
+        kaspa_in_orders,
+        currency_for_trading,
+        user_id,
+        order_id,
+    )
+
+
+# async def main():
+#     res = await get_registered_to_status(653500570)
+#     print(res)
+#
+#
+# if __name__ == "__main__":
+#     asyncio.run(main())
