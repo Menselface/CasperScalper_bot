@@ -1,5 +1,3 @@
-# main.py
-
 from datetime import datetime
 
 from aiogram import Bot, Dispatcher, types, F
@@ -28,7 +26,7 @@ from utils.send_and_pin_message import send_and_pin
 from utils.user_setup_symbols import user_set_up
 from utils.user_setup_symbols import user_setup_router
 
-# Инициализация бота и диспетчера
+
 bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
 
@@ -44,7 +42,6 @@ dp.include_routers(
                     )
 
 
-# Обработчики команд
 @dp.message(Command('start'))
 async def start_command(message: types.Message):
     await handle_start(message, bot)
@@ -80,7 +77,6 @@ async def price_command(message: types.Message):
     await handle_price(message)
     
 
-# поменял /start_trade на /trade, поменял  /go_work на /start_trade (14-10-2024) поменял команду /autobuy на /go_work 01-10-2024
 @dp.message(Command('trade'))
 async def go_work_command(message: types.Message, bot: Bot, state: FSMContext):
     await user_set_up(message, bot, state)
@@ -90,7 +86,6 @@ async def go_work_command(message: types.Message, bot: Bot, state: FSMContext):
 async def admin_panel(message: types.Message, bot: Bot, state: FSMContext):
     await handle_admin(message, bot, state)
     
-# поменять команду stop на stop_buy
 @dp.message(Command('fee'))
 async def stop_command(message: types.Message, state: FSMContext, bot: Bot):
     await get_user_commission_keybs(message, state, bot)
@@ -101,21 +96,6 @@ async def subs_command(message: types.Message):
     await handle_subs(message, bot)
 
 
-@dp.message(Command('help'))
-async def help_command(message: types.Message):
-    help_text = (
-        "<b>Infinity Bot Pro v. 2.148</b>\n\n"
-        "1. Принцип работы Бота ➡️ <a href='https://telegra.ph/Princip-raboty-Kaspa-Scalping-Bot-Pro-10-27'>[ЗДЕСЬ]</a>\n\n"
-        "2. Частые вопросы ➡️ <a href='https://telegra.ph/CHastye-voprosy-FAQ-Kaspa-Scalping-Bot-10-24'>[FAQ]</a>\n\n"
-        "3. Подробнее о Боте в Телеграм ➡️ <a href='https://t.me/Infinity_Bot_Pro'>[КАНАЛ]</a>\n\n"
-        "4. ЧАТ➡️ <a href='https://t.me/+SlFS19D7cdc3MzQy'>Чат Infinity Crypto</a>\n\n"
-        "5. Поддержка: <a href='https://t.me/Infinty_Support'>Support_Infinity_Bot</a>"
-    )
-
-    await message.reply(help_text, parse_mode='HTML', disable_web_page_preview=True)
-
-
-# Запуск бота
 async def main():
     schedule = AsyncIOScheduler(timezone='Europe/Kiev')
     bot_info = await bot.get_me()

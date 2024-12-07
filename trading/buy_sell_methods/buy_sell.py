@@ -30,6 +30,10 @@ async def get_symbol_price(symbol: str):
         except httpx.TimeoutException:
             logger.warning("Request timed out.")
             continue
+        except Exception as e:
+            logger.warning(f"Exeptiion {e}")
+            await asyncio.sleep(5)
+            continue
 
 
 class BuySellOrders:

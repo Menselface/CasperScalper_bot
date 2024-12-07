@@ -81,7 +81,7 @@ async def create_logs():
     if not os.path.exists(LOGS_DIR):
         os.makedirs(LOGS_DIR)
     if not os.path.exists(user_log_file):
-        logger.add(user_log_file, rotation="10 MB", retention="5 days", compression="gz", level="INFO")
+        logger.add(user_log_file, rotation="100 MB", retention="5 days", compression="gz", level="INFO")
 
 async def notify_admin(user_id, error_msg, bot: Bot):
     log_file = f'logs/logers.log'
