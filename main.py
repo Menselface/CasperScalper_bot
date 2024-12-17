@@ -23,6 +23,7 @@ from trading.start_trade import user_start_trade
 from utils.additional_methods import create_logs
 from utils.registration_ending import final_of_registration_date
 from utils.send_and_pin_message import send_and_pin
+from utils.trading_view_analyze import handle_start_trading_view
 from utils.user_setup_symbols import user_set_up
 from utils.user_setup_symbols import user_setup_router
 
@@ -115,6 +116,7 @@ async def main():
         logger.info("Проверка конца регистраций для пользователей запущенна")
         
         schedule.add_job(start_orders_checker, kwargs={'bot': bot})
+        schedule.add_job(handle_start_trading_view, kwargs={'bot': bot})
         
         schedule.start()
         await bot.delete_webhook(drop_pending_updates=True)
