@@ -13,7 +13,7 @@ from first_reg import check_status_of_registration
 from keyboards import params_keyboard, \
     user_autobuy_down_keyboard_off, back_keyboard, yes_no_keyboard, params_choice_symbol, ParamsMyCallbackSymbol
 from trading.db_querys.db_symbols_for_trade_methods import get_user_symbol_data, update_user_symbol_data, \
-    set_standart_user_params, set_standart_user_params_for_all
+    set_standart_user_params, set_standart_user_params_for_all, get_user_exist_with_symbol, add_user
 from utils.additional_methods import format_symbol, safe_format
 from utils.only_int import find_only_integer, find_only_integer_int
 
@@ -25,7 +25,8 @@ class ParametersState(StatesGroup):
     percent_profit = State()
     user_trade_limit = State()
     autobuy_down_percent = State()
-    
+
+
 @parameters_router.callback_query(StateFilter('*'), F.data == 'cancel_to_parametrs')
 async def handle_parameters_choice_symbol(message: types.Message, state: FSMContext, bot: Bot):
     await state.set_state(None)
@@ -34,6 +35,10 @@ async def handle_parameters_choice_symbol(message: types.Message, state: FSMCont
     if not status:
         await message.answer(text)
         return
+    for symbol in PAIR_TABLE_MAP.keys():
+        user_exist = await get_user_exist_with_symbol(user_id, symbol)
+        if not user_exist:
+            await add_user(user_id, symbol=symbol, start_stop=False)
     await bot.send_message(
         chat_id=user_id,
         text="Выберите торговую пару",
@@ -42,27 +47,27 @@ async def handle_parameters_choice_symbol(message: types.Message, state: FSMCont
 
 
 @parameters_router.callback_query(ParamsMyCallbackSymbol.filter())
-async def user_choice_symbol_in_params(callback: CallbackQuery, callback_data: ParamsMyCallbackSymbol, bot: Bot, state: FSMContext):
+async def user_choice_symbol_in_params(callback: CallbackQuery, callback_data: ParamsMyCallbackSymbol, bot: Bot,
+                                       state: FSMContext):
     user_id = callback.from_user.id
     action = callback_data.action
     symbol = action.split("_")[-1]
     text_area_symbol = format_symbol(symbol)
     await state.update_data(symbol=symbol)
     if action.startswith("set_order_limit_"):
-        mes = await callback.message.answer(f"Введите новый размер ордера (USDT):",
-                                                  reply_markup=await back_keyboard())
+        mes = await callback.message.answer(f"Введите новый размер ордера ({text_area_symbol}):",
+                                            reply_markup=await back_keyboard())
         await state.update_data(message_id_callback=mes.message_id)
         await state.set_state(ParametersState.order_limit)
         return
-        
     
     if action.startswith("set_profit_percent_"):
         mes = await callback.message.answer("Введите новый процент прибыли (%):",
-                                                  reply_markup=await back_keyboard())
+                                            reply_markup=await back_keyboard())
         await state.update_data(message_id_callback=mes.message_id)
         await state.set_state(ParametersState.percent_profit)
         return
-        
+    
     if action.startswith("limit_of_trading_"):
         if text_area_symbol == "everything":
             mes = await callback.message.answer(f"Введите лимит покупки для всех пар",
@@ -70,19 +75,37 @@ async def user_choice_symbol_in_params(callback: CallbackQuery, callback_data: P
             await state.update_data(message_id_callback=mes.message_id)
             await state.set_state(ParametersState.user_trade_limit)
             return
-            
+        
         mes = await callback.message.answer(f"Введите лимит покупки для пары {text_area_symbol}",
-                                                      reply_markup=await back_keyboard())
+                                            reply_markup=await back_keyboard())
         await state.update_data(message_id_callback=mes.message_id)
         await state.set_state(ParametersState.user_trade_limit)
         return
-        
+    
     if action.startswith("set_autobuy_down_"):
         user_id = callback.from_user.id
         autobuy_status = await get_user_symbol_data(user_id, symbol, 'auto_buy_down_perc')
+        if not autobuy_status:
+            result = 0
+            for pair in PAIR_TABLE_MAP:
+                result += await get_user_symbol_data(user_id, pair, 'auto_buy_down_perc')
+            if result == 4000:
+                mes = await callback.message.answer(
+                    "Процент при падении у вас сейчас отключен по всем торговым парам.\nВведите процент для автопокупки при падении и он включится автоматически:",
+                    reply_markup=await back_keyboard())
+                await state.update_data(message_id_callback=mes.message_id)
+                await state.set_state(ParametersState.autobuy_down_percent)
+                return
+            else:
+                mes = await callback.message.answer("Введите процент для автопокупки при падении (%):",
+                                                    reply_markup=await user_autobuy_down_keyboard_off())
+                await state.update_data(message_id_callback=mes.message_id)
+                await state.set_state(ParametersState.autobuy_down_percent)
+                return
+        
         if autobuy_status != 1000:
             mes = await callback.message.answer("Введите процент для автопокупки при падении (%):",
-                                                      reply_markup=await user_autobuy_down_keyboard_off())
+                                                reply_markup=await user_autobuy_down_keyboard_off())
             await state.update_data(message_id_callback=mes.message_id)
             await state.set_state(ParametersState.autobuy_down_percent)
             return
@@ -96,11 +119,11 @@ async def user_choice_symbol_in_params(callback: CallbackQuery, callback_data: P
     
     if action.startswith("reset_settings_"):
         mes = await callback.message.answer(f"Сбросить параметры на стандартные для пары {text_area_symbol}?\n"
-                                                  "Размер ордера - <b>5.0</b> USDT\n"
-                                                  "Процент прибыли - <b>0.80</b> %\n"
-                                                  "Процент падения ⬇️ - <b>1 %</b>\n"
-                                                  "Лимит на покупки ♾️",
-                                                  reply_markup=await yes_no_keyboard())
+                                            "Размер ордера - <b>5.0</b> USDT\n"
+                                            "Процент прибыли - <b>0.80</b> %\n"
+                                            "Процент падения ⬇️ - <b>1 %</b>\n"
+                                            "Лимит на покупки ♾️",
+                                            reply_markup=await yes_no_keyboard())
         await state.update_data(message_id_callback=mes.message_id)
         return
     if action == "all_pairs":
@@ -110,8 +133,8 @@ async def user_choice_symbol_in_params(callback: CallbackQuery, callback_data: P
         await state.update_data(message_id=mes.message_id)
         return
     mes = await bot.send_message(user_id,
-                           f"Настройки торговли {text_area_symbol}:",
-                           reply_markup=await params_keyboard(user_id, symbol))
+                                 f"Настройки торговли {text_area_symbol}:",
+                                 reply_markup=await params_keyboard(user_id, symbol))
     await state.update_data(message_id=mes.message_id)
 
 
@@ -149,14 +172,21 @@ async def autobuy_off(callback_query: types.CallbackQuery, state: FSMContext, bo
     message_id_callback = data.get("message_id_callback")
     symbol = data.get("symbol")
     text_area_symbol = format_symbol(symbol)
+    if text_area_symbol == "everything":
+        text_area_symbol = "всех торговых пар"
+        user_id = callback_query.from_user.id
+        for pair in PAIR_TABLE_MAP.keys():
+            await update_user_symbol_data(user_id, pair, auto_buy_down_perc=1000)
+        await state.set_state(None)
+        mes = await callback_query.message.answer(f"Процент покупки для {text_area_symbol} при падении отключен ✅\n")
+        return
     await state.set_state(None)
     user_id = callback_query.from_user.id
-    await set_autobuy_down_db(user_id, 1000)
+    await update_user_symbol_data(user_id, symbol, auto_buy_down_perc=1000)
     mes = await callback_query.message.answer(f"Процент покупки для {text_area_symbol} при падении отключен ✅\n")
     await delete_message(user_id, message_id_callback, bot)
     
     logger.info(f"Пользователь {user_id}: - Процент покупки при падении отключен ✅")
-
 
 
 @parameters_router.message(StateFilter(ParametersState.order_limit))
@@ -170,19 +200,20 @@ async def process_order_limit(message: types.Message, state: FSMContext, bot: Bo
     message_id = data.get("message_id")
     message_id_callback = data.get("message_id_callback")
     if not user_new_limit or user_new_limit < 5:
-        await message.answer("Сумма разрешённая биржей не может быть менее <b>5$</b>.\nВведите размер ордера целым числом:")
+        await message.answer(
+            "Сумма разрешённая биржей не может быть менее <b>5$</b>.\nВведите размер ордера целым числом:")
         return
-        
+    
     if symbol == "everything":
         text_area_symbol = "Для всех торговых пар"
         symbols_to_update = list(PAIR_TABLE_MAP.keys())
     else:
         text_area_symbol = format_symbol(symbol)
         symbols_to_update = [symbol]
-        
+    
     for sym in symbols_to_update:
         await update_user_symbol_data(user_id, sym, order_limit_by=round(user_new_limit))
-        
+    
     await message.delete()
     await message.answer(
         f"Размер ордера {text_area_symbol} изменен:\n {user_old_parametr} → {round(float(message.text), 2)}"
@@ -215,14 +246,14 @@ async def process_percent_profit(message: types.Message, state: FSMContext, bot:
     if not (0.3 <= user_new_limit < 100.0):
         await message.answer('Пожалуйста введите значение только цифрами от 0.3 до 99%')
         return
-        
+    
     if symbol == "everything":
         text_area_symbol = "Для всех торговых пар"
         symbols_to_update = list(PAIR_TABLE_MAP.keys())
     else:
         text_area_symbol = format_symbol(symbol)
         symbols_to_update = [symbol]
-        
+    
     for sym in symbols_to_update:
         await update_user_symbol_data(user_id, sym, percent_profit=round(user_new_limit, 2))
     
@@ -240,8 +271,7 @@ async def process_percent_profit(message: types.Message, state: FSMContext, bot:
             reply_markup=await params_keyboard(user_id, symbol)
         )
         await state.update_data(message_id=mes.message_id)
-    
-    
+
 
 @parameters_router.message(StateFilter(ParametersState.user_trade_limit))
 async def process_user_trade_limit(message: types.Message, state: FSMContext, bot: Bot):
@@ -255,7 +285,7 @@ async def process_user_trade_limit(message: types.Message, state: FSMContext, bo
     message_id_callback = data.get("message_id_callback")
     if not user_new_limit:
         await message.answer('Пожалуйста введите значение только <b>целыми</b> числами.')
-        
+    
     if symbol == "everything":
         text_area_symbol = "Для всех торговых пар"
         symbols_to_update = list(PAIR_TABLE_MAP.keys())
@@ -268,7 +298,8 @@ async def process_user_trade_limit(message: types.Message, state: FSMContext, bo
     
     await message.delete()
     
-    await message.answer(f"Лимит покупки для {text_area_symbol} изменен:\n <b>{user_old_parametr} → {message.text}</b> ")
+    await message.answer(
+        f"Лимит покупки для {text_area_symbol} изменен:\n <b>{user_old_parametr} → {message.text}</b> ")
     await state.set_state(None)
     await delete_message(user_id, message_id_callback, bot)
     if symbol != "everything":
@@ -279,7 +310,7 @@ async def process_user_trade_limit(message: types.Message, state: FSMContext, bo
             reply_markup=await params_keyboard(user_id, symbol)
         )
         await state.update_data(message_id=mes.message_id)
-    
+
 
 @parameters_router.message(StateFilter(ParametersState.autobuy_down_percent))
 async def process_autobuy_down(message: types.Message, state: FSMContext, bot: Bot):
@@ -297,7 +328,7 @@ async def process_autobuy_down(message: types.Message, state: FSMContext, bot: B
         text_area_symbol = "Для всех торговых пар"
         symbols_to_update = list(PAIR_TABLE_MAP.keys())
         await message.answer(
-            f"Процент падения для {text_area_symbol} (%) изменен для всех пар. ")
+            f"Процент падения для {text_area_symbol} (%) изменен для всех пар → {safe_format(float(message.text), 2)}.")
     else:
         user_old_parametr = await get_user_symbol_data(user_id, symbol, 'auto_buy_down_perc')
         text_area_symbol = format_symbol(symbol)
@@ -322,7 +353,6 @@ async def process_autobuy_down(message: types.Message, state: FSMContext, bot: B
             reply_markup=await params_keyboard(user_id, symbol)
         )
         await state.update_data(message_id=mes.message_id)
-    
 
 
 async def delete_message(user_id, message_id, bot: Bot):

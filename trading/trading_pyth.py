@@ -15,6 +15,7 @@ from trading.db_querys.db_symbols_for_trade_methods import update_start_stop, ge
     update_user_symbol_data
 from trading.session_manager import manager_pyth
 from utils.additional_methods import create_time, user_message_returner
+from utils.user_api_keys_checker import validation_user_keys
 from utils.user_buy_total import get_user_buy_sum
 
 
@@ -24,6 +25,12 @@ async def pyth_trader(message: Message, bot: Bot, result: dict = None):
     user_secret_key = await get_secret_key(user_id)
     """Есть команда  СТОП?"""
     while True:
+        check_api_keys = await validation_user_keys(user_api_keys, user_secret_key)
+        if not check_api_keys:
+            logger.warning(f"Пользователь {user_id}  некоректные ключи PYTH/USDT")
+            await bot.send_message(user_id, f'Ошибка в апи ключах, сообщите в поддержку @Infinty_Support.')
+            await update_user_symbol_data(user_id, "PYTHUSDT", start_stop=False)
+            return
         if result:
             avg_price = result["avg_price"]
             actual_order_id = result["actual_order"]
@@ -62,7 +69,7 @@ async def pyth_trader(message: Message, bot: Bot, result: dict = None):
                 else:
                     await bot.send_message(
                         chat_id=user_id,
-                        text="Недостаточно USDT для совершения покупки.\nНастраивается в /parameters."
+                        text="Недостаточно USDT для совершения покупки PYTH.\nНастраивается в /parameters."
                     )
                     await update_user_symbol_data(user_id, "PYTHUSDT", info_no_usdt=1)
                     continue
@@ -90,7 +97,7 @@ async def pyth_trader(message: Message, bot: Bot, result: dict = None):
             sui_price = await get_symbol_price('PYTHUSDT')
             auto_buy_down_perc = await get_user_symbol_data(user_id, "PYTHUSDT", "auto_buy_down_perc")
             percent_profit = await get_user_symbol_data(user_id, "PYTHUSDT", "percent_profit")
-            sold_price = sui_price * (1 + percent_profit / 100)
+            sold_price = avg_price * (1 + percent_profit / 100)
             threshold_price = avg_price * (1 - auto_buy_down_perc / 100)
             await asyncio.sleep(3)
             start_or_stop = await get_user_symbol_data(user_id, "PYTHUSDT", "start_stop")
@@ -118,7 +125,7 @@ async def pyth_trader(message: Message, bot: Bot, result: dict = None):
             
             if float(sui_price) <= float(threshold_price):
                 await message.answer(
-                    f'🔻 <b>УВЕДОМЛЕНИЕ</b> 🔻\n PYTH упала до цены {round(threshold_price, 6)} (на {round(auto_buy_down_perc, 2)} % от {round(avg_price, 6)})').as_(
+                    f'🔻 <b>УВЕДОМЛЕНИЕ</b> 🔻 цена\nPYTH упала до {round(threshold_price, 4)} (на {round(auto_buy_down_perc, 2)} % от {round(avg_price, 4)})').as_(
                     bot)
                 result = None
                 break

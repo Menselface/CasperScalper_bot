@@ -5,6 +5,7 @@ from aiogram import Router, types, Bot
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 
 from config import PAIR_TABLE_MAP
+from utils.additional_methods import format_symbol
 from utils.calendar_ import SimpleCalAct, SimpleCalendarCallback, SimpleMonthCalendar, SimpleCalendar
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
@@ -16,24 +17,24 @@ simple_calendar = SimpleCalendar()
 mounth_calendar = SimpleMonthCalendar()
 
 
-
 class TradeStatistics:
     def __init__(self, user_id: int, pair_table_map: Dict[str, str]):
         self.user_id = user_id
         self.pair_table_map = pair_table_map
         self.total_count = 0
         self.total_profit = 0.0
-
+    
     async def _get_all_data_for_user(self):
         all_data = {}
         for pair, table in self.pair_table_map.items():
             all_data[pair] = await get_all_open_sell_orders_autobuy_from_any_table(self.user_id, pair, 2)
         return all_data
-
-    def _calculate_statistics_for_period(self, trades: List[Dict], selected_date: str, filter_type: str) -> (int, float):
+    
+    def _calculate_statistics_for_period(self, trades: List[Dict], selected_date: str, filter_type: str) -> (
+    int, float):
         count = 0
         profit = 0.0
-
+        
         for trade in trades:
             try:
                 if filter_type == "day":
@@ -42,33 +43,33 @@ class TradeStatistics:
                     transact_time_str = trade['transacttimesell'].strftime("%m.%Y")
                 else:
                     raise ValueError("Unknown filter type")
-
+                
                 if transact_time_str == selected_date:
                     count += 1
                     profit += trade['feelimitorder']
             except KeyError:
                 continue
-
+        
         return count, profit
-
+    
     async def get_statistics_for_period(self, selected_date: str, filter_type: str) -> str:
         all_data = await self._get_all_data_for_user()
         statistics = []
         total_count = 0
         total_profit = 0.0
-
+        
         for pair, trades in all_data.items():
             pair_count, pair_profit = self._calculate_statistics_for_period(trades, selected_date, filter_type)
-
+            
             if pair_count > 0:
                 statistics.append(
-                    f"<b>{pair[:3]}/{pair[3:]}</b>\n"
+                    f"<b>{format_symbol(pair)}</b>\n"
                     f"Количество сделок: {pair_count}\n"
-                    f"Прибыль: {round(pair_profit, 2)} {pair[3:]}\n"
+                    f"Прибыль: {round(pair_profit, 2)} {pair[-4:]}\n"
                 )
                 total_count += pair_count
                 total_profit += pair_profit
-                
+        
         summary = f"Прибыль за: {selected_date}\n\n" + "\n".join(statistics)
         summary += f"\n<b>Всего:\nКоличество сделок: {total_count}\nПрибыль: {round(total_profit, 2)} USDT</b>"
         
@@ -80,8 +81,8 @@ class TradeStatistics:
         
         for trade in trades:
             try:
-                    count += 1
-                    profit += trade['feelimitorder']
+                count += 1
+                profit += trade['feelimitorder']
             except KeyError:
                 continue
         
@@ -108,7 +109,7 @@ class TradeStatistics:
         summary = "\n".join(statistics)
         summary += f"\n<b>Всего:</b>\nКоличество сделок: {total_count}\nПрибыль: {round(total_profit, 2)} USDT"
         return summary
-    
+
 
 async def handle_stats(message: types.Message, from_statistic=False, from_yesterday=None):
     user_id = message.from_user.id
@@ -128,7 +129,7 @@ async def handle_stats(message: types.Message, from_statistic=False, from_yester
     if from_statistic:
         return stats
     keyboard = InlineKeyboardBuilder()
-
+    
     keyboard.row(
         InlineKeyboardButton(text="Дневная", callback_data="select_day"),
         InlineKeyboardButton(text="Месяц", callback_data="select_month"),
@@ -170,7 +171,7 @@ async def handle_calendar_callback(callback: CallbackQuery, callback_data: Simpl
 async def process_full_selection(callback: CallbackQuery, bot: Bot):
     user_id = callback.from_user.id
     trade_statistics = TradeStatistics(user_id, PAIR_TABLE_MAP)
-    res  = await trade_statistics.get_for_all_period_text()
+    res = await trade_statistics.get_for_all_period_text()
     await bot.edit_message_text(
         res,
         chat_id=callback.message.chat.id,

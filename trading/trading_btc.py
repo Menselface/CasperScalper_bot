@@ -14,6 +14,7 @@ from trading.db_querys.db_for_btc_table import delete_order_by_user_and_order_id
 from trading.db_querys.db_symbols_for_trade_methods import get_user_symbol_data, update_user_symbol_data
 from trading.session_manager import manager_btc
 from utils.additional_methods import create_time, safe_format
+from utils.user_api_keys_checker import validation_user_keys
 from utils.user_buy_total import get_user_buy_sum
 
 
@@ -23,6 +24,12 @@ async def btc_usdc_trader(message: Message, bot: Bot, result: dict = None):
     user_secret_key = await get_secret_key(user_id)
     """Есть команда  СТОП?"""
     while True:
+        check_api_keys = await validation_user_keys(user_api_keys, user_secret_key)
+        if not check_api_keys:
+            logger.warning(f"Пользователь {user_id}  некоректные ключи BTC/USDC")
+            await bot.send_message(user_id, f'Ошибка в апи ключах, сообщите в поддержку @Infinty_Support.')
+            await update_user_symbol_data(user_id, "BTCUSDC", start_stop=False)
+            return
         if result:
             avg_price = result["avg_price"]
             actual_order_id = result["actual_order"]
@@ -61,7 +68,7 @@ async def btc_usdc_trader(message: Message, bot: Bot, result: dict = None):
                 else:
                     await bot.send_message(
                         chat_id=user_id,
-                        text="Недостаточно USDC для совершения покупки.\nНастраивается в /parameters."
+                        text="Недостаточно USDC для совершения покупки BTC.\nНастраивается в /parameters."
                     )
                     await update_user_symbol_data(user_id, "BTCUSDC", info_no_usdt=1)
                     continue
@@ -115,7 +122,7 @@ async def btc_usdc_trader(message: Message, bot: Bot, result: dict = None):
             
             if float(btc_price) <= float(threshold_price):
                 await message.answer(
-                    f'🔻 <b>УВЕДОМЛЕНИЕ</b> 🔻\nBTC упала до цены {safe_format(threshold_price, 2)} (на {safe_format(auto_buy_down_perc, 2)} % от {safe_format(avg_price, 6)})').as_(
+                    f'🔻 <b>УВЕДОМЛЕНИЕ</b> 🔻 цена\nBTC упала до {safe_format(threshold_price, 2)} (на {safe_format(auto_buy_down_perc, 2)} % от {safe_format(avg_price, 2)})').as_(
                     bot)
                 result = None
                 break
@@ -207,7 +214,7 @@ async def send_messages_to_user_btc(message: Message, orders, bot):
             total_after_sale = res['totalamountaftersale']
             fee_limit_order = res['feelimitorder']
             user_message = f"<b>ПРОДАНО:</b>\n" \
-                           f"{safe_format(qnty_for_sell, 6)} BTC по {safe_format(price_to_sell, 1)} USDT\n" \
+                           f"{safe_format(qnty_for_sell, 6)} BTC по {safe_format(price_to_sell, 2)} USDT\n" \
                            f"<b>Получено:</b> {safe_format(total_after_sale, 2)} USDT\n" \
                            f"<b>ПРИБЫЛЬ:</b> {safe_format(fee_limit_order, 4)} USDT\n"
             await message.answer(user_message, parse_mode="HTML").as_(bot)

@@ -12,11 +12,13 @@ class UserSessionManagerStartStop:
         kaspa_status = await get_symbols_for_keyboard(user_id, "KASUSDT")
         sui_status = await get_symbols_for_keyboard(user_id, "SUIUSDT")
         pyth_status = await get_symbols_for_keyboard(user_id, "PYTHUSDT")
+        dot_status = await get_symbols_for_keyboard(user_id, "DOTUSDT")
         self.sessions[user_id] = [
             {"BTCUSDC": btc_status},
-            {"KASUSDT": kaspa_status,
-             "SUIUSDT": sui_status,
-             "PYTHUSDT": pyth_status}
+            {"KASUSDT": kaspa_status},
+            {"SUIUSDT": sui_status},
+            {"PYTHUSDT": pyth_status},
+            {"DOTUSDT": dot_status}
         ]
         logger.info(f"User {user_id} marked as active.")
     

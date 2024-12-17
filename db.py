@@ -90,9 +90,8 @@ async def is_admin_checker(user_id):
         return [record['telegram_id'] for record in result]
     except Exception as e:
         logger.warning(e)
-    
-    
-    
+
+
 async def get_all_admins():
     try:
         if db_async.pool is None:
@@ -101,8 +100,8 @@ async def get_all_admins():
         return [record['telegram_id'] for record in result]
     except Exception as e:
         logger.warning(e)
-        
-        
+
+
 async def is_reset_status(user_id):
     try:
         if db_async.pool is None:
@@ -112,10 +111,8 @@ async def is_reset_status(user_id):
         return result
     except Exception as e:
         logger.warning(e)
-        
-        
 
-        
+
 async def all_users_with_reset_status():
     try:
         if db_async.pool is None:
@@ -124,7 +121,8 @@ async def all_users_with_reset_status():
         return [record['telegram_id'] for record in result]
     except Exception as e:
         logger.warning(e)
-        
+
+
 async def all_users_with_registration_status():
     try:
         if db_async.pool is None:
@@ -186,9 +184,9 @@ async def set_access_key(user_id, access_key):
     except Exception as e:
         logger.warning(e)
         return False
-    
 
-async def set_user_stop_autobuy(user_id : int, stop_buy: int ) -> bool:
+
+async def set_user_stop_autobuy(user_id: int, stop_buy: int) -> bool:
     """Set user stop buy 1 or 0 in users table"""
     try:
         if db_async.pool is None:
@@ -219,8 +217,8 @@ async def get_first_message(user_id):
     
     except Exception as e:
         logger.warning(f"Error retrieving message from DB: {e}")
-        
-        
+
+
 async def set_first_message(user_id, message):
     try:
         if db_async.pool is None:
@@ -230,6 +228,7 @@ async def set_first_message(user_id, message):
     except Exception as e:
         logger.warning(e)
         return False
+
 
 async def set_reset_autobuy(user_id, status):
     try:
@@ -261,7 +260,6 @@ async def get_access_key(user_id):
         return res
     except Exception as e:
         logger.warning(e)
-
 
 
 async def get_secret_key(user_id):
@@ -460,6 +458,7 @@ async def update_order_by_order_id(user_id: int, orderId: str, time_sell: dateti
     except Exception as e:
         logger.warning(e)
 
+
 async def update_all_not_autobuy(user_id, status):
     try:
         if db_async.pool is None:
@@ -472,6 +471,7 @@ async def update_all_not_autobuy(user_id, status):
                              status)
     except Exception as e:
         logger.warning(e)
+
 
 async def update_orderafter_sale_by_order_id(user_id: int, orderId: str,
                                              time_sell: datetime.datetime = None,
@@ -544,13 +544,15 @@ async def get_buy_price(user_id, order_id):
         return res
     except Exception as e:
         logger.warning(e)
-        
+
+
 async def spend_in_usdt_for_buy_order(user_id, order_id):
     try:
         if db_async.pool is None:
             await db_async.connect()
         res = await db_async.fetchval(
-            """SELECT totalamountonpurchace FROM orders WHERE telegram_id_market = $1 AND order_id_limit = $2  """, user_id,
+            """SELECT totalamountonpurchace FROM orders WHERE telegram_id_market = $1 AND order_id_limit = $2  """,
+            user_id,
             order_id)
         return res
     except Exception as e:
@@ -564,7 +566,7 @@ async def delete_order_by_user_and_order_id(user_id: int, order_id: str):
         
         result = await db_async.fetch("""DELETE FROM orders WHERE telegram_id_market = $1 AND order_id_limit = $2""",
                                       user_id, order_id)
-
+    
     
     except Exception as e:
         logger.warning(e)
@@ -575,7 +577,7 @@ async def delete_order_by_user_and_order_id_from_any_table(table_name, user_id: 
     try:
         if db_async.pool is None:
             await db_async.connect()
-            
+        
         query = f"""DELETE FROM {table_name} WHERE telegram_id_market = $1 AND (order_id_limit = $2 OR order_id = $2)"""
         
         result = await db_async.fetch(query, user_id, order_id_limit)
@@ -587,7 +589,8 @@ async def delete_order_by_user_and_order_id_from_any_table(table_name, user_id: 
         return False
 
 
-async def delete_order_by_user_and_order_id_from_any_table_for_one_only_case(table_name, user_id: int, order_id_limit: str):
+async def delete_order_by_user_and_order_id_from_any_table_for_one_only_case(table_name, user_id: int,
+                                                                             order_id_limit: str):
     try:
         if db_async.pool is None:
             await db_async.connect()
@@ -632,7 +635,6 @@ async def get_all_open_sell_orders_autobuy(user_id, status):
 
 
 async def get_all_open_sell_orders_autobuy_from_any_table(user_id: int, pair: str, status: int):
-
     user_id = int(user_id)
     status = int(status)
     
@@ -681,7 +683,8 @@ async def closed_orders_for_pin_message(user_id: int, status: int, now: datetime
         if db_async.pool is None:
             await db_async.connect()
         res = await db_async.fetch(
-            """SELECT feelimitorder FROM orders WHERE telegram_id_market = $1 AND autobay = $2 AND  DATE(transacttimesell) = $3""", user_id,
+            """SELECT feelimitorder FROM orders WHERE telegram_id_market = $1 AND autobay = $2 AND  DATE(transacttimesell) = $3""",
+            user_id,
             status, now)
         sum_of_all_deals = 0
         length = 0
@@ -691,7 +694,8 @@ async def closed_orders_for_pin_message(user_id: int, status: int, now: datetime
         return sum_of_all_deals, length
     except Exception as e:
         logger.warning(e)
-        
+
+
 async def get_all_id_with_registered_to_status(today: datetime) -> list:
     try:
         if db_async.pool is None:
@@ -702,7 +706,8 @@ async def get_all_id_with_registered_to_status(today: datetime) -> list:
         return result
     except Exception as e:
         logger.info(f"Попытка достать пользователя не удалась {e}")
-        
+
+
 async def get_registered_to_status(user_id: int):
     try:
         if db_async.pool is None:
@@ -713,6 +718,7 @@ async def get_registered_to_status(user_id: int):
     except Exception as e:
         logger.info(f"Попытка достать пользователя не удалась {e}")
 
+
 async def get_registered_to(user_id):
     try:
         if db_async.pool is None:
@@ -721,20 +727,22 @@ async def get_registered_to(user_id):
         return res
     except Exception as e:
         logger.warning(e)
-        
-async def status_of_ending_of_registration(three_days_before: datetime, seven_day_after: datetime ) -> list:
+
+
+async def status_of_ending_of_registration(three_days_before: datetime, seven_day_after: datetime) -> list:
     seven_day_after = seven_day_after - timedelta(seconds=5)
     try:
         if db_async.pool is None:
             await db_async.connect()
         res = await db_async.fetch(
-            """SELECT telegram_id, registered_to FROM users WHERE registered_to <= $1 AND registered_to >= $2""", three_days_before, seven_day_after)
+            """SELECT telegram_id, registered_to FROM users WHERE registered_to <= $1 AND registered_to >= $2""",
+            three_days_before, seven_day_after)
         return res
     except Exception as e:
         logger.info(f"Попытка достать пользователя не удалась {e}")
 
 
-async def get_all_open_sell_orders_nine(user_id: int, status: int, current_price: str|float):
+async def get_all_open_sell_orders_nine(user_id: int, status: int, current_price: str | float):
     try:
         user_id = int(user_id)
         status = int(status)
@@ -784,7 +792,8 @@ async def get_orders_from_data(user_id, oreder_id):
         return res
     except Exception as e:
         logger.warning(e)
-        
+
+
 async def get_totalamountonpurchace_from_any_table(table_name: str, order_id):
     try:
         if db_async.pool is None:
@@ -802,7 +811,7 @@ async def get_totalamountonpurchace_from_any_table(table_name: str, order_id):
         logger.warning(f"Ошибка в get_totalamountonpurchace_from_any_table: {e}")
 
 
-async def get_order_id_limit_from_any_table(table_name: str,  user_id, order_id):
+async def get_order_id_limit_from_any_table(table_name: str, user_id, order_id):
     try:
         if db_async.pool is None:
             await db_async.connect()
@@ -817,23 +826,23 @@ async def get_order_id_limit_from_any_table(table_name: str,  user_id, order_id)
     
     except Exception as e:
         logger.warning(f"Ошибка в get_totalamountonpurchace_from_any_table: {e}")
-        
-        
+
+
 async def update_order_after_sale_by_order_id_any_table(
-    table_name: str,  # Название таблицы
-    user_id: int,
-    order_id: str,
-    time_of_order_sell: str,
-    qnty_for_sell: float,
-    price_to_sell: float,
-    order_id_limit: str,
-    autobuy: int,
-    total_amount_after_sale: float,
-    feelimit: float,
-    balance_total: float,
-    orders_in_progress: int,
-    kaspa_in_orders: float,
-    currency_for_trading: float,
+        table_name: str,  # Название таблицы
+        user_id: int,
+        order_id: str,
+        time_of_order_sell: str,
+        qnty_for_sell: float,
+        price_to_sell: float,
+        order_id_limit: str,
+        autobuy: int,
+        total_amount_after_sale: float,
+        feelimit: float,
+        balance_total: float,
+        orders_in_progress: int,
+        kaspa_in_orders: float,
+        currency_for_trading: float,
 ):
     """
     Обновление данных ордера в указанной таблице.
@@ -869,12 +878,3 @@ async def update_order_after_sale_by_order_id_any_table(
         user_id,
         order_id,
     )
-
-
-# async def main():
-#     res = await get_registered_to_status(653500570)
-#     print(res)
-#
-#
-# if __name__ == "__main__":
-#     asyncio.run(main())

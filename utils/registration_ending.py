@@ -37,8 +37,8 @@ async def final_of_registration_date(bot: Bot):
             user_id = user['telegram_id']
             user_actual_status = user['registered_to'].strftime('%Y-%m-%d %H:%M:%S')
             if user_actual_status == three_days_before.strftime('%Y-%m-%d %H:%M:%S'):
-                await bot.send_message(chat_id=user_id, text=f'Привет! Мы заметили, что твоя подписка на Бота подходит к концу через 3 дня. '
-                                                             f'Успей продлить подписку и продолжай зарабатывать вместе с нами!\nPегистрация до {user_actual_status_}')
+                await bot.send_message(chat_id=user_id, text=f'Привет! Твоя подписка на Бота подходит к концу через 3 дня. '
+                                                             f'Успей продлить подписку и продолжай зарабатывать!\nPегистрация до {user_actual_status_}')
             if user_actual_status == one_day_before.strftime('%Y-%m-%d %H:%M:%S'):
                 user_actual_status_ = user['registered_to']
                 
@@ -64,6 +64,6 @@ async def final_of_registration_date(bot: Bot):
             if user_actual_status == three_day_after.strftime('%Y-%m-%d %H:%M:%S'):
                 await bot.send_message(chat_id=user_id, text='Твоя подписка на Бота завершена через 4 дня бот остановится. Все сделки и данные будут удалены. Не теряй свой шанс — вернись в строй!')
             if user_actual_status == seven_day_after.strftime('%Y-%m-%d %H:%M:%S'):
-                await bot.send_message(chat_id=user_id, text='Остался последний день до полной остановки бота и удаления всех данных. Ты еще можешь продлить подписку и сохранить результаты. Нажми здесь, чтобы не упустить прибыль!')
+                await bot.send_message(chat_id=user_id, text='Остался последний день до полной остановки бота и удаления всех данных. Ты еще можешь продлить подписку и сохранить результаты. Не упусти прибыль!')
         await asyncio.sleep(1)
     

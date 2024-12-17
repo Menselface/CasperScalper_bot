@@ -1,4 +1,5 @@
 import asyncio
+import traceback
 
 from loguru import logger
 from mexc_api.common.enums import Side, OrderType
@@ -40,8 +41,10 @@ class BuySellOrders:
             if not buy_market:
                 await update_all_not_autobuy_any_table(self.user_id,  1, self.symbol)
                 
-            new_order_buy = await asyncio.to_thread(self.http_mexc.open_new_order, side=Side.BUY,
-                                                    quote_order_quantity=str(self.order_limit_by_user))
+            new_order_buy = await asyncio.to_thread(self.http_mexc.open_new_order,
+                                                    side=Side.BUY,
+                                                    quote_order_quantity=str(self.order_limit_by_user)
+                                                    )
             
             await asyncio.sleep(1)
             """                 Order buy details                 """
@@ -94,6 +97,9 @@ class BuySellOrders:
                 return None, None, "Error 429"
             else:
                 logger.critical(f"Ошибка у пользователя {self.user_id}: {str(e)}")
+                logger.critical(f"Ошибка у пользователя {self.user_id}: {str(e)}")
+                logger.critical("Подробности ошибки:\n" + traceback.format_exc())
+                logger.opt(exception=True).critical("Детальный стек вызовов")
                 await notify_admin(self.user_id, str(e), bot)
                 return None, None, "critical_error"
     

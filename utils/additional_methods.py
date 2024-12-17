@@ -12,7 +12,7 @@ from config import PAIR_TABLE_MAP
 from db import get_all_open_sell_orders, get_all_admins
 from db import get_all_open_sell_orders_autobuy
 from db import get_secret_key, get_access_key
-from trading.session_manager import manager_kaspa, manager_btc
+from trading.session_manager import manager_kaspa, manager_btc, manager_sui, manager_pyth, manager_dot
 
 
 async def check_user_last_autobuy_for_reset(user_id):
@@ -81,7 +81,7 @@ async def create_logs():
     if not os.path.exists(LOGS_DIR):
         os.makedirs(LOGS_DIR)
     if not os.path.exists(user_log_file):
-        logger.add(user_log_file, rotation="100 MB", retention="5 days", compression="gz", level="INFO")
+        logger.add(user_log_file, rotation="10 MB", retention="5 days", compression="gz", level="INFO")
 
 async def notify_admin(user_id, error_msg, bot: Bot):
     log_file = f'logs/logers.log'
@@ -118,12 +118,12 @@ def user_message_returner(
                         ):
     if pair == "BTCUSDC":
         user_message = f"<b>ПРОДАНО:</b>\n" \
-                       f"{safe_format(qnty_for_sell, 6)} {pair[:-4]} по {safe_format(price_to_sell, 1)} {pair[-4:]}\n" \
+                       f"{safe_format(qnty_for_sell, 6)} {pair[:-4]} по {safe_format(price_to_sell, 2)} {pair[-4:]}\n" \
                        f"<b>Получено:</b> {safe_format(total_after_sale, 2)} {pair[-4:]}\n" \
                        f"<b>ПРИБЫЛЬ:</b> {safe_format(fee_limit_order, 4)} {pair[-4:]}\n"
     else:
         user_message = f"<b>ПРОДАНО:</b>\n" \
-                       f"{safe_format(qnty_for_sell, 1)} {pair[:-4]} по {safe_format(price_to_sell, 6)} {pair[-4:]}\n" \
+                       f"{safe_format(qnty_for_sell, 2)} {pair[:-4]} по {safe_format(price_to_sell, 4)} {pair[-4:]}\n" \
                        f"<b>Получено:</b> {safe_format(total_after_sale, 2)} {pair[-4:]}\n" \
                        f"<b>ПРИБЫЛЬ:</b> {safe_format(fee_limit_order, 4)} {pair[-4:]}\n"
     return user_message
@@ -139,18 +139,18 @@ def user_buy_message_returner(
     if pair == "BTCUSDC":
         user_message = (
             f"<b>КУПЛЕНО:</b>\n"
-            f"{safe_format(qnty_for_sell, 6)} {pair[:-4]} по {safe_format(avg_price, 1)} {pair[-4:]}\n"
-            f"Потрачено - {safe_format(spend_in_usdt_for_buy, 1)} {pair[-4:]}\n"
+            f"{safe_format(qnty_for_sell, 6)} {pair[:-4]} по {safe_format(avg_price, 2)} {pair[-4:]}\n"
+            f"Потрачено - {safe_format(spend_in_usdt_for_buy, 2)} {pair[-4:]}\n"
             f"<b>ВЫСТАВЛЕНО:</b>\n"
             f"{safe_format(qnty_for_sell, 6)} {pair[:-4]} по {safe_format(price_to_sell, 2)} {pair[-4:]}\n"
         )
     else:
         user_message = (
             f"<b>КУПЛЕНО:</b>\n"
-            f"{safe_format(qnty_for_sell, 6)} {pair[:-4]} по {safe_format(avg_price, 1)} {pair[-4:]}\n"
-            f"Потрачено - {safe_format(spend_in_usdt_for_buy, 1)} {pair[-4:]}\n"
+            f"{safe_format(qnty_for_sell, 6)} {pair[:-4]} по {safe_format(avg_price, 4)} {pair[-4:]}\n"
+            f"Потрачено - {safe_format(spend_in_usdt_for_buy, 4)} {pair[-4:]}\n"
             f"<b>ВЫСТАВЛЕНО:</b>\n"
-            f"{safe_format(qnty_for_sell, 6)} {pair[:-4]} по {safe_format(price_to_sell, 2)} {pair[-4:]}\n"
+            f"{safe_format(qnty_for_sell, 6)} {pair[:-4]} по {safe_format(price_to_sell, 4)} {pair[-4:]}\n"
         )
     
     return user_message
@@ -185,8 +185,14 @@ async def process_order_result(result):
 async def user_active_pair(user_id, pair):
     if pair == "KASUSDT":
         return manager_kaspa.is_active(user_id)
-    else:
+    elif pair == "BTCUSDC":
         return manager_btc.is_active(user_id)
+    elif pair == "SUIUSDT":
+        return manager_sui.is_active(user_id)
+    elif pair == "PYTHUSDT":
+        return manager_pyth.is_active(user_id)
+    else:
+        return manager_dot.is_active(user_id)
     
     
 def find_pair(symbol):

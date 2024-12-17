@@ -1,4 +1,5 @@
 import asyncio
+import traceback
 
 import httpx
 from loguru import logger
@@ -29,10 +30,6 @@ async def get_symbol_price(symbol: str):
             continue
         except httpx.TimeoutException:
             logger.warning("Request timed out.")
-            continue
-        except Exception as e:
-            logger.warning(f"Exeptiion {e}")
-            await asyncio.sleep(5)
             continue
 
 
@@ -109,6 +106,9 @@ class BuySellOrders:
                 return None, None, "Error 429"
             else:
                 logger.critical(f"Ошибка у пользователя {self.user_id}: {str(e)}")
+                logger.critical(f"Ошибка у пользователя {self.user_id}: {str(e)}")
+                logger.critical("Подробности ошибки:\n" + traceback.format_exc())
+                logger.opt(exception=True).critical("Детальный стек вызовов")
                 await notify_admin(self.user_id, str(e), bot)
                 return None, None, "critical_error"
                 
@@ -141,7 +141,7 @@ class BuySellOrders:
                 spend_in_usdt_for_buy = await spend_in_usdt_for_buy_order(user_id, order_sell_id)
                 message_order_buy = f"<b>КУПЛЕНО:</b>\n" \
                                     f"{safe_format(qnty_for_sell, 2)} KAS по {safe_format(avg_price, 6)} USDT\n" \
-                                    f"Потраченно - {safe_format(spend_in_usdt_for_buy, 1)} USDT\n" \
+                                    f"Потраченно - {safe_format(spend_in_usdt_for_buy, 2)} USDT\n" \
                                     f"<b>ВЫСТАВЛЕННО:</b>\n" \
                                     f"{safe_format(qnty_for_sell, 2)} KAS по {safe_format(price_to_sell, 6)} USDT\n"
                 await asyncio.sleep(1)

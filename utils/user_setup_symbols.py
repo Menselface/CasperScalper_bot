@@ -15,11 +15,11 @@ user_setup_router = Router()
 async def user_set_up(message: Message, bot: Bot, state: FSMContext):
     user_id = message.from_user.id
     await user_start_stop.remove_user(user_id)
-    text = ("Управление торговлей\n"
+    text = ("<b>Управление торговлей:</b>\n"
         "Зелёная галочка ✅ — бот торгует этой монетой.\n"
         "1. ✅ Отметь галочкой пару, которой хочешь торговать.\n"
         "2. ❌ Сними галочку с пары, с которой НЕ хочешь торговать.\n"
-        "3. Нажми [Подтвердить].")
+        "3. Нажми <b>[Подтвердить]</b>.")
 
     mes = await bot.send_message(
         chat_id=user_id,

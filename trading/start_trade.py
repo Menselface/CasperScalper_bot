@@ -11,6 +11,7 @@ from trading.db_querys.db_for_btc_table import get_all_open_sell_orders_autobuy_
 from trading.db_querys.db_symbols_for_trade_methods import get_symbols_for_keyboard, update_user_symbol_data
 from trading.sesison_manager_start_stop import user_start_stop
 from trading.trading_btc import btc_usdc_trader
+from trading.trading_dot_usdt import dot_trader
 from trading.trading_kas import kaspa_trader
 from trading.trading_pyth import pyth_trader
 from trading.trading_sui import sui_trader
@@ -23,15 +24,19 @@ async def user_set_up_callbacks(callback: CallbackQuery, callback_data: StartTra
     user_id = callback.from_user.id
     action = callback_data.action
     user_data = await user_start_stop.get_session_data(user_id)
+    
     btc_status = next((currency.get("BTCUSDC") for currency in user_data if "BTCUSDC" in currency), False)
     kaspa_status = next((currency.get("KASUSDT") for currency in user_data if "KASUSDT" in currency), False)
     sui_status = next((currency.get("SUIUSDT") for currency in user_data if "SUIUSDT" in currency), False)
     pyth_status = next((currency.get("PYTHUSDT") for currency in user_data if "PYTHUSDT" in currency), False)
+    dot_status = next((currency.get("DOTUSDT") for currency in user_data if "DOTUSDT" in currency), False)
     
     btc = await get_symbols_for_keyboard(user_id, "BTCUSDC")
     kaspa = await get_symbols_for_keyboard(user_id, "KASUSDT")
     sui = await get_symbols_for_keyboard(user_id, "SUIUSDT")
     pyth = await get_symbols_for_keyboard(user_id, "PYTHUSDT")
+    dot = await get_symbols_for_keyboard(user_id, "DOTUSDT")
+    
     text = await generate_status_text(user_id)
     tasks = []
     res = await get_first_message(user_id)
@@ -67,6 +72,13 @@ async def user_set_up_callbacks(callback: CallbackQuery, callback_data: StartTra
         elif not pyth_status and pyth:
             await update_user_symbol_data(user_id, "PYTHUSDT", start_stop=False)
             
+        if dot_status and not dot:
+            task = asyncio.create_task(dot_trader(res, bot))
+            await update_user_symbol_data(user_id, "DOTUSDT", start_stop=True)
+            tasks.append(task)
+        elif not dot_status and dot:
+            await update_user_symbol_data(user_id, "DOTUSDT", start_stop=False)
+            
         await bot.send_message(
             chat_id=user_id,
             text=result_text
@@ -95,6 +107,8 @@ async def user_restart_from_admin_panel(message: Message, bot: Bot):
     kaspa = await get_symbols_for_keyboard(user_id, "KASUSDT")
     sui = await get_symbols_for_keyboard(user_id, "SUIUSDT")
     pyth = await get_symbols_for_keyboard(user_id, "PYTHUSDT")
+    dot = await get_symbols_for_keyboard(user_id, "DOTUSDT")
+    
     tasks = []
     res = await get_first_message(user_id)
     if btc:
@@ -120,6 +134,12 @@ async def user_restart_from_admin_panel(message: Message, bot: Bot):
         result = await process_order_result(data)
         task = asyncio.create_task(pyth_trader(res, bot, result))
         await update_user_symbol_data(user_id, "PYTHUSDT", start_stop=True)
+        tasks.append(task)
+    if dot:
+        data = await get_all_open_sell_orders_autobuy_from_any_table(user_id, "DOTUSDT", status=1)
+        result = await process_order_result(data)
+        task = asyncio.create_task(dot_trader(res, bot, result))
+        await update_user_symbol_data(user_id, "DOTUSDT", start_stop=True)
         tasks.append(task)
         
     await set_reset_autobuy(user_id, 0)

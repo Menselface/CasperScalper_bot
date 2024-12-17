@@ -20,21 +20,30 @@ class AccountMexcMethods:
         self.free_kas = 0
         self.total_after_sale = 0
         self.total_after_sale_Kass = 0
+        
         self.total_free_usdt = 0
         self.usdt_locked = 0
         self.locked = 0
+        
         self.total_free_usdc = 0
         self.total_after_sale_usdc = 0
         self.usdc_locked = 0
+        
         self.free_btc = 0
         self.total_after_sale_btc = 0
         self.locked_btc = 0
+        
         self.free_sui = 0
         self.total_after_sale_sui = 0
         self.locked_sui = 0
+        
         self.free_pyth = 0
         self.locked_pyth = 0
         self.total_after_sale_pyth = 0
+        
+        self.free_dot = 0
+        self.locked_dot = 0
+        self.total_after_sale_dot = 0
     
     def _generate_signature(self, params: dict) -> str:
         query_string = urlencode(params)
@@ -112,12 +121,12 @@ class AccountMexcMethods:
             result = res.json()
             if 'orderId' in result:
                 return result
-            elif "must be sent, but both were empty/null!" in  result['msg']:
+            elif "must be sent, but both were empty/null!" in result['msg']:
                 return "Order lost in the echo"
             
             else:
                 return None
-            
+        
         except ValueError:
             logger.info('Failed to decode JSON response.')
             return None
@@ -172,19 +181,19 @@ class AccountMexcMethods:
                         )
                         
                         self.usdc_locked = float(balance.get('locked'))
-                        
+                    
                     
                     elif asset == 'KAS':
                         self.free_kas = float(balance.get('free', 0))
                         self.locked = float(balance.get('locked', 0))
                         self.total_after_sale += (self.free_kas + self.locked) * float(market_price['price'])
-                        
+                    
                     
                     elif asset == 'SUI':
                         self.free_sui = float(balance.get('free', 0))
                         self.locked_sui = float(balance.get('locked', 0))
-                        self.total_after_sale_sui += (self.free_sui +  self.locked_sui) * float(market_price['price'])
-                        
+                        self.total_after_sale_sui += (self.free_sui + self.locked_sui) * float(market_price['price'])
+                    
                     elif asset == 'BTC':
                         self.free_btc = float(balance.get('free', 0))
                         self.locked_btc = float(balance.get('locked'))
@@ -194,7 +203,11 @@ class AccountMexcMethods:
                         self.free_pyth = float(balance.get('free', 0))
                         self.locked_pyth = float(balance.get('locked'))
                         self.total_after_sale_pyth += (self.free_pyth + self.locked_pyth) * float(market_price['price'])
-                       
+                    
+                    elif asset == 'DOT':
+                        self.free_dot = float(balance.get('free', 0))
+                        self.locked_dot = float(balance.get('locked'))
+                        self.total_after_sale_dot += (self.free_dot + self.locked_dot) * float(market_price['price'])
                 
                 return account
             except (httpx.HTTPError, ValueError, IndexError):
@@ -229,19 +242,3 @@ class AccountMexcMethods:
             except ValueError:
                 logger.warning("Ошибка преобразования ответа в JSON")
             return None
-
-
-# api_key = "mx0vglp2mmtTvV1atO"
-# api_secret = "d10007277f4e462bb43bd9f59472d02e"
-#
-# async def main():
-#     mexc = AccountMexcMethods(api_key, api_secret, symbol="KASUSDT")
-#     start_time = int((time.time() - 24 * 60 * 60) * 1000)  # За последние 24 часа
-#     orders = await mexc.get_open_orders()
-#     if orders:
-#         for order in orders:
-#             pprint(order)
-#     print(len(orders))
-#
-# import asyncio
-# asyncio.run(main())

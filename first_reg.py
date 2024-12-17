@@ -1,17 +1,15 @@
-import json
 from datetime import datetime
 
 from aiogram import Router, Bot, F, types
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
-from aiogram.types import Message
 from aiogram.utils.serialization import deserialize_telegram_object_to_python
 
-from all_mexc_methods.AccountMexc import AccountMexcMethods
 from config import ADMIN_ID
 from db import *
 from keyboards import trial_keyboard
+from utils.user_api_keys_checker import validation_user_keys
 
 registration_states_router = Router()
 
@@ -26,9 +24,9 @@ async def handle_start(message: Message, bot: Bot):
     username = "Нет"
     first_name = "Нет"
     last_name = "Нет"
-    date_time = datetime.now()
+    date_time = datetime.datetime.now()
     date_time = date_time.replace(second=0, microsecond=0)
-    specific_date = datetime(1990, 1, 1, 23, 59)
+    specific_date = datetime.datetime(1990, 1, 1, 23, 59)
     text, status_of_expired = await check_status_of_registration(message)
     access_key = await get_access_key(user_id)
     message_json = json.dumps(deserialize_telegram_object_to_python(message))
@@ -70,12 +68,11 @@ async def handle_registration(message: Message, state: FSMContext):
         await message.answer(text, parse_mode='HTML')
         return
     text, status_of_expired = await check_status_of_registration(message)
-    if status_of_expired:
+    if not status_of_expired:
         await message.answer(
             "Добро пожаловать. Следуйте инструкции ниже:\n"
             "Сгенерируйте на бирже MEXC.COM в своем личном кабинете API ключи ",
             parse_mode='HTML',
-            # добавил это, чтобы небыло превью
             disable_web_page_preview=True
         )
         
@@ -85,6 +82,7 @@ async def handle_registration(message: Message, state: FSMContext):
         )
         
         await state.set_state(RegistrationStates.access_key_state)
+        return
     else:
         await message.answer(text, parse_mode='HTML')
 
@@ -93,22 +91,19 @@ async def handle_registration(message: Message, state: FSMContext):
 async def set_trial_for_user(callback_query: types.CallbackQuery, state: FSMContext, bot: Bot):
     user_id = callback_query.from_user.id
     user_first_trial = await user_get_any(user_id, trial_promo="trial_promo")
-    today = datetime.today()
+    today = datetime.datetime.now()
     if user_first_trial:
         await bot.send_message(
             chat_id=user_id,
             text="Ваш пробный период уже был активирован ранее\n\n"
         )
         return
-    today = datetime.today()
+    today = datetime.datetime.now()
     trial_period = (today + timedelta(days=7)).replace(hour=23, minute=59, second=0, microsecond=0)
     await user_update(user_id, registered_to=trial_period)
-    await bot.send_message(
-        chat_id=user_id,
-        text="Пробный период активирован! 🎉\n \n <b>Введи Access Key (начинается на mx…):</b>"
-    )
+    await callback_query.answer("Пробный период активирован! 🎉", show_alert=True)
     await user_update(user_id, trial_promo=True)
-    await state.set_state(RegistrationStates.access_key_state)
+    await handle_registration(callback_query.message, state)
 
 
 @registration_states_router.message(StateFilter(RegistrationStates.access_key_state))
@@ -129,9 +124,8 @@ async def handle_secret_key(message: Message, state: FSMContext, bot: Bot):
     await state.clear()
     user_api_keys = await get_access_key(user_id)
     user_secret_key = await get_secret_key(user_id)
-    account_spot_conn = AccountMexcMethods(user_api_keys, user_secret_key)
-    s = account_spot_conn.get_account_info_()
-    if 'Api key info invalid' in s:
+    check_api_keys = await validation_user_keys(user_api_keys, user_secret_key)
+    if not check_api_keys:
         admin_message = f"Пользователь @{username} ввел некоректные ключи при регистрации"
         await bot.send_message(user_id, f'Ошибка в апи ключах, сообщите в поддержку @AlisaStrange.')
         await bot.send_message(ADMIN_ID, admin_message, parse_mode='HTML')
@@ -151,6 +145,7 @@ async def check_status_of_registration(message: Message) -> tuple[str, bool]:
     date_time = date_time.replace(second=0, microsecond=0)
     user_message2 = (
         f"Привет, {message.from_user.first_name}.\n\n"
+        f"<b>Полная информация по боту:</b>\n"
         f"«Я осознаю все риски торговли криптовалютой, принимаю их на себя и понимаю, что могу стать холдером криптовалюты»\n"
         f"Активируя тестовый период, я подтверждаю своё согласие и готов торговать с помощью Бота\n"
         f"⬇️⬇️⬇️\n\n"

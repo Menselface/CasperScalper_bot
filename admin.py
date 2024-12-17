@@ -9,7 +9,7 @@ from loguru import logger
 
 from db import is_admin_checker, set_reset_autobuy, all_users_with_reset_status, get_first_message
 from keyboards import admin_keyboard
-from trading.session_manager import manager_sui, manager_pyth
+from trading.session_manager import manager_sui, manager_pyth, manager_dot
 from trading.start_trade import user_restart_from_admin_panel
 from trading.trading_btc import manager_btc
 from trading.trading_kas import manager_kaspa
@@ -71,7 +71,8 @@ async def refresh_all_users(message: Message, bot: Bot):
     active_users_kaspa = manager_kaspa.sessions
     active_users_sui = manager_sui.sessions
     active_users_pyth = manager_pyth.sessions
-    hello_everybody = active_users_kaspa | active_users_btc | active_users_sui | active_users_pyth
+    active_users_dot = manager_dot.sessions
+    hello_everybody = active_users_kaspa | active_users_btc | active_users_sui | active_users_pyth | active_users_dot
     logger.info(f"{hello_everybody} переведены в статус 1")
     await bot.send_message(user_id,
                            f"1. К обновлению готов!\n{hello_everybody.keys()} переведены в статус 1\n\n"

@@ -6,11 +6,6 @@ from urllib.parse import urlencode
 
 from config import BASE_URL
 
-
-# api_key = "mx0vglp2mmtTvV1atO"
-# api_secret = "d10007277f4e462bb43bd9f59472d02e"
-
-
 def check_user_own_commission(api_key, api_secret):
     symbol = "KASUSDT"
     params = {
@@ -30,6 +25,7 @@ def check_user_own_commission(api_key, api_secret):
     res = requests.get(f'{BASE_URL}/tradeFee', headers=headers, params=params)
     result = res.json()
     if result['data']:
+        print(result['data'])
         return result['data']
     else:
         return False

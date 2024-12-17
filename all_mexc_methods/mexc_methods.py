@@ -1,9 +1,7 @@
-from pprint import pprint
-
-from mexc_api.common.enums import Side, OrderType
-from mexc_api.spot import Spot
-from mexc_api.spot.endpoints._market import _Market
 import asyncio
+
+from mexc_api.common.enums import OrderType
+from mexc_api.spot import Spot
 
 
 class CreateSpotConn:
@@ -86,19 +84,4 @@ class CreateSpotConn:
     async def current_open_orders_loop(self):
         while True:
             orders = self.open_orders()
-            print(f"Открытые ордера: {orders}")
             await asyncio.sleep(5)
-
-
-api_key = "mx0vgl2RfS79ubslmx"
-api_secret = "23879388919a4c8fa83d800c6700bc2b"
-
-
-async def main():
-    http_mexc = CreateSpotConn(api_key, api_secret)
-    s = http_mexc.get_last_trades()
-    pprint(s)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())

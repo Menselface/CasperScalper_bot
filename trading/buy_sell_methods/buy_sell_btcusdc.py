@@ -1,4 +1,5 @@
 import asyncio
+import traceback
 
 from loguru import logger
 from mexc_api.common.enums import Side, OrderType
@@ -84,6 +85,9 @@ class BuySellOrders:
                 return None, None, "Error 429"
             else:
                 logger.critical(f"Ошибка у пользователя {self.user_id}: {str(e)}")
+                logger.critical(f"Ошибка у пользователя {self.user_id}: {str(e)}")
+                logger.critical("Подробности ошибки:\n" + traceback.format_exc())
+                logger.opt(exception=True).critical("Детальный стек вызовов")
                 await notify_admin(self.user_id, str(e), bot)
                 return None, None, "critical_error"
     
@@ -118,8 +122,8 @@ class BuySellOrders:
                 spend_in_usdt_for_buy = await spend_in_usdt_for_buy_order(user_id, order_sell_id)
                 message_order_buy = (
                     f"<b>КУПЛЕНО:</b>\n"
-                    f"{safe_format(qnty_for_sell, 6)} BTC по {safe_format(avg_price, 1)} USDT\n"
-                    f"Потраченно - {safe_format(spend_in_usdt_for_buy, 1)} USDT\n"
+                    f"{safe_format(qnty_for_sell, 6)} BTC по {safe_format(avg_price, 2)} USDT\n"
+                    f"Потраченно - {safe_format(spend_in_usdt_for_buy, 2)} USDT\n"
                     f"<b>ВЫСТАВЛЕННО:</b>\n"
                     f"{safe_format(qnty_for_sell, 6)} BTC по {safe_format(price_to_sell, 2)} USDT\n"
                 )

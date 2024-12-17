@@ -32,7 +32,8 @@ async def handle_pair_selection(callback: CallbackQuery, callback_data: PairCall
         await callback.message.edit_text(f"У вас нет активных ордеров для пары {pair}.")
         return
     
-    await send_paginated_message(callback.message, grouped_records, 1, len(grouped_records), len(sorted_records), pair, state, bot)
+    await send_paginated_message(callback.message, grouped_records, 1, len(grouped_records), len(sorted_records), pair,
+                                 state, bot)
 
 
 async def send_paginated_message(message: Message, grouped_records: list, current_page: int,
@@ -71,7 +72,7 @@ async def send_paginated_message(message: Message, grouped_records: list, curren
                 f"- Продается по {safe_format(priceordersell, 2)} ({safe_format(totalsellamount, 2)} USDC)\n"
                 f"{formatted_date}"
             )
-            
+        
         number += 1
     header = f"{format_symbol(pair)}    {' ✅ торгует' if is_user_trade_now else '⬛️ OFF'}" if current_page == 1 else ""
     result_text = f"{header}\n\n<b>Всего ордеров - {total_orders_len}</b>\n\n" + "\n\n".join(messages)

@@ -13,7 +13,7 @@ from trading.db_querys.db_symbols_for_trade_methods import get_user_symbol_data
 
 class AssetBalance:
     def __init__(self, symbol: str, available: float, in_orders: float, orders_count: int = 0,
-                 buy_sum: float = 0.0, sell_sum: float = 0.0, limit: float = 0.0, for_total = 0.0):
+                 buy_sum: float = 0.0, sell_sum: float = 0.0, limit: float = 0.0, for_total=0.0):
         self.symbol = symbol
         self.available = available
         self.in_orders = in_orders
@@ -61,11 +61,18 @@ async def get_balance_data(user_id: int) -> dict:
     return {
         "usdt": {"available": acc_info.total_free_usdt, "in_orders": acc_info.usdt_locked},
         "usdc": {"available": acc_info.total_free_usdc, "in_orders": acc_info.usdc_locked},
-        "kaspa": {"available": acc_info.free_kas, "in_orders": acc_info.locked, "for_total" : acc_info.free_kas * await get_symbol_price("KASUSDT")},
-        "btc": {"available": acc_info.free_btc, "in_orders": acc_info.locked_btc, "for_total" : acc_info.free_btc * await get_symbol_price("BTCUSDC")},
-        "sui": {"available": acc_info.free_sui, "in_orders": acc_info.locked_sui, "for_total" : acc_info.free_sui * await get_symbol_price("SUIUSDT")},
-        "pyth": {"available": acc_info.free_pyth, "in_orders": acc_info.locked_pyth, "for_total" : acc_info.free_pyth * await get_symbol_price("PYTHUSDT")}
+        "kaspa": {"available": acc_info.free_kas, "in_orders": acc_info.locked,
+                  "for_total": acc_info.free_kas * await get_symbol_price("KASUSDT")},
+        "btc": {"available": acc_info.free_btc, "in_orders": acc_info.locked_btc,
+                "for_total": acc_info.free_btc * await get_symbol_price("BTCUSDC")},
+        "sui": {"available": acc_info.free_sui, "in_orders": acc_info.locked_sui,
+                "for_total": acc_info.free_sui * await get_symbol_price("SUIUSDT")},
+        "pyth": {"available": acc_info.free_pyth, "in_orders": acc_info.locked_pyth,
+                 "for_total": acc_info.free_pyth * await get_symbol_price("PYTHUSDT")},
+        "dot": {"available": acc_info.free_dot, "in_orders": acc_info.locked_dot,
+                "for_total": acc_info.free_dot * await get_symbol_price("DOTUSDT")},
     }
+
 
 async def get_order_data(user_id: int, symbol: str) -> dict:
     """Получает данные по ордерам для заданной валюты/пары."""
@@ -81,15 +88,17 @@ async def get_order_data(user_id: int, symbol: str) -> dict:
         "limit": limit
     }
 
+
 async def handle_balance(message: Message, bot: Bot):
     user_id = message.from_user.id
-
+    
     balance_data = await get_balance_data(user_id)
-
+    
     btc_order_data = await get_order_data(user_id, "BTCUSDC")
     kaspa_order_data = await get_order_data(user_id, "KASUSDT")
     sui_order_data = await get_order_data(user_id, "SUIUSDT")
     pyth_order_data = await get_order_data(user_id, "PYTHUSDT")
+    dot_order_data = await get_order_data(user_id, "DOTUSDT")
     
     balances = [
         AssetBalance(
@@ -111,7 +120,7 @@ async def handle_balance(message: Message, bot: Bot):
             buy_sum=btc_order_data.get("buy_sum", 0),
             sell_sum=btc_order_data.get("sell_sum", 0),
             limit=btc_order_data.get("limit", 0)
-            
+        
         ),
         AssetBalance(
             "KAS",
@@ -122,7 +131,7 @@ async def handle_balance(message: Message, bot: Bot):
             buy_sum=kaspa_order_data.get("buy_sum", 0),
             sell_sum=kaspa_order_data.get("sell_sum", 0),
             limit=kaspa_order_data.get("limit", 0)
-            
+        
         ),
         AssetBalance(
             "SUI",
@@ -133,7 +142,7 @@ async def handle_balance(message: Message, bot: Bot):
             buy_sum=sui_order_data.get("buy_sum", 0),
             sell_sum=sui_order_data.get("sell_sum", 0),
             limit=sui_order_data.get("limit", 0)
-            
+        
         ),
         AssetBalance(
             "PYTH",
@@ -144,6 +153,17 @@ async def handle_balance(message: Message, bot: Bot):
             buy_sum=pyth_order_data.get("buy_sum", 0),
             sell_sum=pyth_order_data.get("sell_sum", 0),
             limit=pyth_order_data.get("limit", 0)
+        
+        ),
+        AssetBalance(
+            "DOT",
+            available=balance_data.get("dot", {}).get("available", 0),
+            in_orders=balance_data.get("dot", {}).get("in_orders", 0),
+            for_total=balance_data.get("dot", {}).get("for_total", 0),
+            orders_count=dot_order_data.get("count", 0),
+            buy_sum=dot_order_data.get("buy_sum", 0),
+            sell_sum=dot_order_data.get("sell_sum", 0),
+            limit=dot_order_data.get("limit", 0)
         
         )
     ]
@@ -157,6 +177,6 @@ async def handle_balance(message: Message, bot: Bot):
     summary = (f"\n<b>Итого:</b>\n"
                f"<b>В ордерах:</b> {sum(balance.buy_sum for balance in balances):.2f} USD\n"
                f"<b>После продажи:</b> {total_usd_balances + total_else_balances + (sum(balance.sell_sum for balance in balances)):.2f} USD")
-
+    
     final_message = header + total_balance_text + summary
     await bot.send_message(user_id, final_message)
