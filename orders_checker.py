@@ -7,13 +7,14 @@ from aiogram.types import Message
 from loguru import logger
 
 from all_mexc_methods.AccountMexc import AccountMexcMethods
-from config import PAIR_TABLE_MAP
+from config import PAIR_TABLE_MAP, ADMIN_ID
 from db import get_access_key, get_secret_key, \
     update_order_after_sale_by_order_id_any_table, get_info_commission_percent, \
     get_totalamountonpurchace_from_any_table, get_order_id_limit_from_any_table, get_all_id_with_registered_to_status, \
     get_first_message, get_all_open_sell_orders_autobuy_from_any_table_for_checker, \
     delete_order_by_user_and_order_id_from_any_table
 from utils.additional_methods import create_time, user_message_returner
+from utils.user_api_keys_checker import validation_user_keys
 
 
 class OrdersChecker:
@@ -223,7 +224,6 @@ async def start_orders_checker(bot: Bot):
             if all(not orders for orders in all_data.values()):
                 logger.info(f"User {user_id}: all_data пустой, пропускаем.")
                 continue
-            
             try:
                 start_time = int((time.time() - 24 * 60 * 60) * 1000)
                 mexc = OrdersChecker()

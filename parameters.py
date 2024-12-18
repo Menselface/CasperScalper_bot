@@ -7,7 +7,7 @@ from aiogram.types import CallbackQuery
 from loguru import logger
 from pydantic import ValidationError
 
-from config import PAIR_TABLE_MAP
+from config import PAIR_TABLE_MAP, ADMIN_ID
 from db import set_autobuy_down_db
 from first_reg import check_status_of_registration
 from keyboards import params_keyboard, \
@@ -16,6 +16,7 @@ from trading.db_querys.db_symbols_for_trade_methods import get_user_symbol_data,
     set_standart_user_params, set_standart_user_params_for_all, get_user_exist_with_symbol, add_user
 from utils.additional_methods import format_symbol, safe_format
 from utils.only_int import find_only_integer, find_only_integer_int
+from utils.user_api_keys_checker import validation_user_keys
 
 parameters_router = Router()
 
@@ -34,6 +35,11 @@ async def handle_parameters_choice_symbol(message: types.Message, state: FSMCont
     text, status = await check_status_of_registration(message)
     if not status:
         await message.answer(text)
+        return
+    check_api_keys = await validation_user_keys(user_id)
+    if not check_api_keys:
+        logger.warning(f"Пользователь {user_id}  некоректные ключи")
+        await bot.send_message(ADMIN_ID, f'Ошибка в апи ключах {user_id}.')
         return
     for symbol in PAIR_TABLE_MAP.keys():
         user_exist = await get_user_exist_with_symbol(user_id, symbol)

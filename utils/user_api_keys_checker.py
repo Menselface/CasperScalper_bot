@@ -1,19 +1,40 @@
+import asyncio
+import random
+
 from loguru import logger
 
 from all_mexc_methods.AccountMexc import AccountMexcMethods
+from db import get_access_key, get_secret_key
 
 
-async def validation_user_keys(api_key, api_secret):
-    mexc = AccountMexcMethods(api_key, api_secret)
-    try:
-        res = await mexc.get_account_info_()
-        if res.get("msg") == "Signature for this request is not valid.":
-            return False
-        if res.get('msg') == 'Api key info invalid':
-            return False
-        else:
-            return True
-    except Exception as e:
-        logger.critical(e)
-        return False
-        
+async def validation_user_keys(user_id):
+    user_api_keys = await get_access_key(user_id)
+    user_secret_key = await get_secret_key(user_id)
+    mexc = AccountMexcMethods(user_api_keys, user_secret_key)
+    retries = random.randint(5, 9)
+    delay = random.randint(2, 10)
+
+    for attempt in range(1, retries + 1):
+        try:
+            res = await mexc.get_account_info_()
+
+            logger.debug(f"Attempt {attempt}: Response from API: {res}")
+
+            if not res:
+                logger.warning(f"Attempt {attempt}: Empty response or None from API")
+            else:
+                if res.get("msg") == "Signature for this request is not valid.":
+                    return False
+                if res.get('msg') == 'Api key info invalid':
+                    return False
+                return True
+
+        except Exception as e:
+            logger.error(f"Attempt {attempt}: Error in validation_user_keys: {e}")
+
+        if attempt < retries:
+            logger.info(f"Retrying in {delay} seconds... ({attempt}/{retries})")
+            await asyncio.sleep(delay)
+
+    logger.critical(f"All {retries} attempts failed. Returning False.")
+    return False

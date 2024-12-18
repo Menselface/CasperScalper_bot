@@ -1,19 +1,27 @@
 from aiogram import Bot, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
+from loguru import logger
 
-from config import PAIR_TABLE_MAP
+from config import PAIR_TABLE_MAP, ADMIN_ID
 from keyboards import user_set_up_keyboard, UserSymbolsConfig
 from parameters import delete_message
 from trading.db_querys.db_symbols_for_trade_methods import user_get_any_symbols, get_user_exist_with_symbol, user_update_symbols, \
     user_update_by_symbol, add_user, user_get_any_by_symbol
 from trading.sesison_manager_start_stop import UserSessionManagerStartStop, user_start_stop
+from utils.user_api_keys_checker import validation_user_keys
 
 user_setup_router = Router()
 
 
 async def user_set_up(message: Message, bot: Bot, state: FSMContext):
     user_id = message.from_user.id
+    check_api_keys = await validation_user_keys(user_id)
+    if not check_api_keys:
+        logger.warning(f"Пользователь {user_id}  некоректные ключи")
+        await bot.send_message(ADMIN_ID, f'Ошибка в апи ключах {user_id}.')
+        await bot.send_message(user_id, f'Ошибка в апи ключах, сообщите в поддержку @AlisaStrange.')
+        return
     await user_start_stop.remove_user(user_id)
     text = ("<b>Управление торговлей:</b>\n"
         "Зелёная галочка ✅ — бот торгует этой монетой.\n"

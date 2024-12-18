@@ -25,12 +25,6 @@ async def dot_trader(message: Message, bot: Bot, result: dict = None):
     user_secret_key = await get_secret_key(user_id)
     """Есть команда  СТОП?"""
     while True:
-        check_api_keys = await validation_user_keys(user_api_keys, user_secret_key)
-        if not check_api_keys:
-            logger.warning(f"Пользователь {user_id}  некоректные ключи DOT/USDT")
-            await bot.send_message(user_id, f'Ошибка в апи ключах, сообщите в поддержку @Infinty_Support.')
-            await update_user_symbol_data(user_id, "DOTUSDT", start_stop=False)
-            return
         if result:
             avg_price = result["avg_price"]
             actual_order_id = result["actual_order"]
