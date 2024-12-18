@@ -115,8 +115,8 @@ async def main():
         schedule.add_job(final_of_registration_date, kwargs={'bot': bot})
         logger.info("Проверка конца регистраций для пользователей запущенна")
         
-        # schedule.add_job(start_orders_checker, kwargs={'bot': bot})
-        # schedule.add_job(handle_start_trading_view, kwargs={'bot': bot})
+        schedule.add_job(start_orders_checker, kwargs={'bot': bot})
+        schedule.add_job(handle_start_trading_view, kwargs={'bot': bot})
         
         schedule.start()
         await bot.delete_webhook(drop_pending_updates=True)
