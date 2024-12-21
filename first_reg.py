@@ -48,8 +48,6 @@ async def handle_start(message: Message, bot: Bot):
         )
         await message.answer(text, parse_mode='HTML', reply_markup=trial_keyboard())
         await bot.send_message(ADMIN_ID, admin_message, parse_mode='HTML')
-        await bot.send_message(ADMIN_ID2, admin_message, parse_mode='HTML')
-        await set_first_message(user_id, message_json)
     else:
         timestamp = await get_timestamp_of_registration(user_id)
         user_message = f"Привет, {first_name}.\nВы уже зарегистрированы {timestamp}"
@@ -59,6 +57,7 @@ async def handle_start(message: Message, bot: Bot):
         
         await bot.send_message(user_id, user_message, parse_mode='HTML')
         await message.answer(text, parse_mode='HTML')
+    await set_first_message(user_id, message_json)
 
 
 async def handle_registration(message: Message, state: FSMContext):
