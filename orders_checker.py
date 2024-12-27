@@ -57,7 +57,7 @@ class OrdersChecker:
                         logger.info(f"Данные о закрытом ордере {order}")
                     
                     if status == 'CANCELED':
-                        await delete_order_by_user_and_order_id_from_any_table(table_name, self.user, order)
+                        await delete_order_by_user_and_order_id_from_any_table(table_name, self.user, record['order_id'])
                         logger.info(f"canceled order deleted {order}")
                 
                 except Exception as e:
