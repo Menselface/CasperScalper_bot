@@ -21,6 +21,7 @@ from subs import handle_subs
 from orders_checker import start_orders_checker
 from trading.start_trade import user_start_trade
 from utils.additional_methods import create_logs
+from utils.middlewares import RateLimitMiddleware
 from utils.registration_ending import final_of_registration_date
 from utils.send_and_pin_message import send_and_pin
 from utils.trading_view_analyze import handle_start_trading_view
@@ -30,6 +31,7 @@ from utils.user_setup_symbols import user_setup_router
 
 bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
+dp.message.middleware(RateLimitMiddleware())
 
 dp.include_routers(
     registration_states_router,
