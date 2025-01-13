@@ -23,6 +23,7 @@ class RateLimitMiddleware(BaseMiddleware):
             if user_id in self.limits:
                 last_called = self.limits[user_id]
                 if current_time - last_called < 2:
+                    await event.answer("Вызов ограничен раз в 2 секунды.")
                     return
         
         self.limits[user_id] = current_time
