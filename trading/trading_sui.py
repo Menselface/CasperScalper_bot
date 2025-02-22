@@ -17,6 +17,7 @@ from trading.session_manager import manager_sui
 from utils.additional_methods import create_time, user_message_returner
 from utils.user_api_keys_checker import validation_user_keys
 from utils.user_buy_total import get_user_buy_sum
+from utils.validate_user_statsus import validate_user_status
 
 
 async def sui_trader(message: Message, bot: Bot, result: dict = None):
@@ -25,12 +26,11 @@ async def sui_trader(message: Message, bot: Bot, result: dict = None):
     user_secret_key = await get_secret_key(user_id)
     """Есть команда  СТОП?"""
     while True:
-        # check_api_keys = await validation_user_keys(user_api_keys, user_secret_key)
-        # if not check_api_keys:
-        #     logger.warning(f"Пользователь {user_id}  некоректные ключи SUI/USDT")
-        #     await bot.send_message(user_id, f'Ошибка в апи ключах, сообщите в поддержку @Infinty_Support.')
-        #     await update_user_symbol_data(user_id, "SUIUSDT", start_stop=False)
-        #     return
+        is_user_expired = await validate_user_status(message, user_id, symbol='SUIUSDT', manager=manager_sui,
+                                                     bot=bot)
+        if is_user_expired:
+            await update_user_symbol_data(user_id, "SUIUSDT", start_stop=False)
+            return
         if result:
             avg_price = result["avg_price"]
             actual_order_id = result["actual_order"]

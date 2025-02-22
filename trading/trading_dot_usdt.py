@@ -17,6 +17,7 @@ from trading.session_manager import manager_dot
 from utils.additional_methods import create_time, user_message_returner
 from utils.user_api_keys_checker import validation_user_keys
 from utils.user_buy_total import get_user_buy_sum
+from utils.validate_user_statsus import validate_user_status
 
 
 async def dot_trader(message: Message, bot: Bot, result: dict = None):
@@ -25,6 +26,11 @@ async def dot_trader(message: Message, bot: Bot, result: dict = None):
     user_secret_key = await get_secret_key(user_id)
     """Есть команда  СТОП?"""
     while True:
+        is_user_expired = await validate_user_status(message, user_id, symbol='DOTUSDT', manager=manager_dot,
+                                                     bot=bot)
+        if is_user_expired:
+            await update_user_symbol_data(user_id, "DOTUSDT", start_stop=False)
+            return
         if result:
             avg_price = result["avg_price"]
             actual_order_id = result["actual_order"]

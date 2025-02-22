@@ -11,7 +11,8 @@ async def handle_price(message):
         "BTC": 'https://api.mexc.com/api/v3/ticker/price?symbol=BTCUSDT',
         "SUI": 'https://api.mexc.com/api/v3/ticker/price?symbol=SUIUSDT',
         "PYTH": 'https://api.mexc.com/api/v3/ticker/price?symbol=PYTHUSDT',
-        "DOT": 'https://api.mexc.com/api/v3/ticker/price?symbol=DOTUSDT'
+        "DOT": 'https://api.mexc.com/api/v3/ticker/price?symbol=DOTUSDT',
+        "TAO": 'https://api.mexc.com/api/v3/ticker/price?symbol=TAOUSDT'
     }
 
     # Отправляем запросы к API и получаем курсы
@@ -45,8 +46,8 @@ async def handle_price(message):
         f"<b>BTC</b> - {prices['BTC']}\n\n"
         f"<b>SUI</b> - {prices['SUI']}\n\n"
         f"<b>PYTH</b> - {prices['PYTH']}\n\n"
-        f"<b>DOT</b> - {prices['DOT']}"
+        f"<b>DOT</b> - {prices['DOT']}\n\n"
+        f"<b>TAO</b> - {prices['TAO']}"
     )
 
-    # Отправляем сообщение пользователю с парсингом HTML
     await message.answer(message_text, parse_mode='HTML')

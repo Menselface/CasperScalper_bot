@@ -47,6 +47,7 @@ async def refresh_all_users(message: Message, bot: Bot, state: FSMContext):
         reply_markup=admin_keyboard(level=1))
     await state.update_data(message=mes.message_id)
 
+
 @admin_router.callback_query(F.data == 'back_to_admin')
 async def refresh_all_users(message: Message, bot: Bot, state: FSMContext):
     user_id = message.from_user.id
@@ -59,8 +60,8 @@ async def refresh_all_users(message: Message, bot: Bot, state: FSMContext):
                                 message_id=message_to_edit,
                                 text="Привет админ ✌️",
                                 reply_markup=admin_keyboard(level=0))
-    
-    
+
+
 @admin_router.callback_query(F.data == 'refresh')
 async def refresh_all_users(message: Message, bot: Bot):
     user_id = message.from_user.id
@@ -72,14 +73,15 @@ async def refresh_all_users(message: Message, bot: Bot):
     active_users_sui = manager_sui.sessions
     active_users_pyth = manager_pyth.sessions
     active_users_dot = manager_dot.sessions
-    hello_everybody = active_users_kaspa | active_users_btc | active_users_sui | active_users_pyth | active_users_dot
+    active_users_tao = manager_dot.sessions
+    hello_everybody = active_users_kaspa | active_users_btc | active_users_sui | active_users_pyth | active_users_dot | active_users_tao
     logger.info(f"{hello_everybody} переведены в статус 1")
     await bot.send_message(user_id,
                            f"1. К обновлению готов!\n{hello_everybody.keys()} переведены в статус 1\n\n"
                            "2. Останови Бота на сервере:\n"
                            "➡️ CTRL+C или CTRL+Z"
                            )
-
+    
     for user in hello_everybody.keys():
         await set_reset_autobuy(user, 1)
 
@@ -120,4 +122,3 @@ async def get_logs(message: Message, bot: Bot):
     except Exception as e:
         logger.warning(f"{e}")
         await message.answer(f"Не могу скинуть файл {e}")
-    

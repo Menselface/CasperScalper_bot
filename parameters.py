@@ -40,6 +40,7 @@ async def handle_parameters_choice_symbol(message: types.Message, state: FSMCont
     if not check_api_keys:
         logger.warning(f"Пользователь {user_id}  некоректные ключи")
         await bot.send_message(ADMIN_ID, f'Ошибка в апи ключах {user_id}.')
+        await bot.send_message(user_id, f'Ошибка в апи ключах, сообщите в поддержку 📌@AlisaStrange.')
         return
     for symbol in PAIR_TABLE_MAP.keys():
         user_exist = await get_user_exist_with_symbol(user_id, symbol)

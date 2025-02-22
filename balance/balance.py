@@ -5,6 +5,7 @@ from aiogram.types import Message
 from loguru import logger
 
 from all_mexc_methods.AccountMexc import AccountMexcMethods
+from config import ADMIN_ID
 from db import get_access_key, get_secret_key, \
     get_all_open_sell_orders_autobuy_from_any_table_for_checker
 from trading.buy_sell_methods.buy_sell import get_symbol_price
@@ -67,10 +68,12 @@ async def get_balance_data(user_id: int) -> dict:
                 "for_total": acc_info.free_btc * await get_symbol_price("BTCUSDC")},
         "sui": {"available": acc_info.free_sui, "in_orders": acc_info.locked_sui,
                 "for_total": acc_info.free_sui * await get_symbol_price("SUIUSDT")},
+        "tao": {"available": acc_info.free_tao, "in_orders": acc_info.locked_tao,
+                "for_total": acc_info.free_tao * await get_symbol_price("TAOUSDT")},
         "pyth": {"available": acc_info.free_pyth, "in_orders": acc_info.locked_pyth,
                  "for_total": acc_info.free_pyth * await get_symbol_price("PYTHUSDT")},
         "dot": {"available": acc_info.free_dot, "in_orders": acc_info.locked_dot,
-                "for_total": acc_info.free_dot * await get_symbol_price("DOTUSDT")},
+                "for_total": acc_info.free_dot * await get_symbol_price("DOTUSDT")}
     }
 
 
@@ -90,93 +93,109 @@ async def get_order_data(user_id: int, symbol: str) -> dict:
 
 
 async def handle_balance(message: Message, bot: Bot):
-    user_id = message.from_user.id
-    
-    balance_data = await get_balance_data(user_id)
-    
-    btc_order_data = await get_order_data(user_id, "BTCUSDC")
-    kaspa_order_data = await get_order_data(user_id, "KASUSDT")
-    sui_order_data = await get_order_data(user_id, "SUIUSDT")
-    pyth_order_data = await get_order_data(user_id, "PYTHUSDT")
-    dot_order_data = await get_order_data(user_id, "DOTUSDT")
-    
-    balances = [
-        AssetBalance(
-            "USDT",
-            balance_data.get("usdt", {}).get("available", 0),
-            balance_data.get("usdt", {}).get("in_orders", 0)
-        ),
-        AssetBalance(
-            "USDC",
-            balance_data.get("usdc", {}).get("available", 0),
-            balance_data.get("usdc", {}).get("in_orders", 0)
-        ),
-        AssetBalance(
-            "BTC",
-            available=balance_data.get("btc", {}).get("available"),
-            in_orders=balance_data.get("btc", {}).get("in_orders", 0),
-            for_total=btc_order_data.get("btc", {}).get("for_total", 0),
-            orders_count=btc_order_data.get("count", 0),
-            buy_sum=btc_order_data.get("buy_sum", 0),
-            sell_sum=btc_order_data.get("sell_sum", 0),
-            limit=btc_order_data.get("limit", 0)
+    try:
+        user_id = message.from_user.id
         
-        ),
-        AssetBalance(
-            "KAS",
-            available=balance_data.get("kaspa", {}).get("available", 0),
-            in_orders=balance_data.get("kaspa", {}).get("in_orders", 0),
-            for_total=balance_data.get("kaspa", {}).get("for_total", 0),
-            orders_count=kaspa_order_data.get("count", 0),
-            buy_sum=kaspa_order_data.get("buy_sum", 0),
-            sell_sum=kaspa_order_data.get("sell_sum", 0),
-            limit=kaspa_order_data.get("limit", 0)
+        balance_data = await get_balance_data(user_id)
         
-        ),
-        AssetBalance(
-            "SUI",
-            available=balance_data.get("sui", {}).get("available", 0),
-            in_orders=balance_data.get("sui", {}).get("in_orders", 0),
-            for_total=balance_data.get("sui", {}).get("for_total", 0),
-            orders_count=sui_order_data.get("count", 0),
-            buy_sum=sui_order_data.get("buy_sum", 0),
-            sell_sum=sui_order_data.get("sell_sum", 0),
-            limit=sui_order_data.get("limit", 0)
+        btc_order_data = await get_order_data(user_id, "BTCUSDC")
+        kaspa_order_data = await get_order_data(user_id, "KASUSDT")
+        sui_order_data = await get_order_data(user_id, "SUIUSDT")
+        pyth_order_data = await get_order_data(user_id, "PYTHUSDT")
+        dot_order_data = await get_order_data(user_id, "DOTUSDT")
+        tao_order_data = await get_order_data(user_id, "TAOUSDT")
         
-        ),
-        AssetBalance(
-            "PYTH",
-            available=balance_data.get("pyth", {}).get("available", 0),
-            in_orders=balance_data.get("pyth", {}).get("in_orders", 0),
-            for_total=balance_data.get("pyth", {}).get("for_total", 0),
-            orders_count=pyth_order_data.get("count", 0),
-            buy_sum=pyth_order_data.get("buy_sum", 0),
-            sell_sum=pyth_order_data.get("sell_sum", 0),
-            limit=pyth_order_data.get("limit", 0)
+        balances = [
+            AssetBalance(
+                "USDT",
+                balance_data.get("usdt", {}).get("available", 0),
+                balance_data.get("usdt", {}).get("in_orders", 0)
+            ),
+            AssetBalance(
+                "USDC",
+                balance_data.get("usdc", {}).get("available", 0),
+                balance_data.get("usdc", {}).get("in_orders", 0)
+            ),
+            AssetBalance(
+                "BTC",
+                available=balance_data.get("btc", {}).get("available", 0),
+                in_orders=balance_data.get("btc", {}).get("in_orders", 0),
+                for_total=btc_order_data.get("btc", {}).get("for_total", 0),
+                orders_count=btc_order_data.get("count", 0),
+                buy_sum=btc_order_data.get("buy_sum", 0),
+                sell_sum=btc_order_data.get("sell_sum", 0),
+                limit=btc_order_data.get("limit", 0)
+            
+            ),
+            AssetBalance(
+                "KAS",
+                available=balance_data.get("kaspa", {}).get("available", 0),
+                in_orders=balance_data.get("kaspa", {}).get("in_orders", 0),
+                for_total=balance_data.get("kaspa", {}).get("for_total", 0),
+                orders_count=kaspa_order_data.get("count", 0),
+                buy_sum=kaspa_order_data.get("buy_sum", 0),
+                sell_sum=kaspa_order_data.get("sell_sum", 0),
+                limit=kaspa_order_data.get("limit", 0)
+            
+            ),
+            AssetBalance(
+                "SUI",
+                available=balance_data.get("sui", {}).get("available", 0),
+                in_orders=balance_data.get("sui", {}).get("in_orders", 0),
+                for_total=balance_data.get("sui", {}).get("for_total", 0),
+                orders_count=sui_order_data.get("count", 0),
+                buy_sum=sui_order_data.get("buy_sum", 0),
+                sell_sum=sui_order_data.get("sell_sum", 0),
+                limit=sui_order_data.get("limit", 0)
+            
+            ),
+            AssetBalance(
+                "PYTH",
+                available=balance_data.get("pyth", {}).get("available", 0),
+                in_orders=balance_data.get("pyth", {}).get("in_orders", 0),
+                for_total=balance_data.get("pyth", {}).get("for_total", 0),
+                orders_count=pyth_order_data.get("count", 0),
+                buy_sum=pyth_order_data.get("buy_sum", 0),
+                sell_sum=pyth_order_data.get("sell_sum", 0),
+                limit=pyth_order_data.get("limit", 0)
+            
+            ),
+            AssetBalance(
+                "DOT",
+                available=balance_data.get("dot", {}).get("available", 0),
+                in_orders=balance_data.get("dot", {}).get("in_orders", 0),
+                for_total=balance_data.get("dot", {}).get("for_total", 0),
+                orders_count=dot_order_data.get("count", 0),
+                buy_sum=dot_order_data.get("buy_sum", 0),
+                sell_sum=dot_order_data.get("sell_sum", 0),
+                limit=dot_order_data.get("limit", 0)
+            
+            ),
+            AssetBalance(
+                "TAO",
+                available=balance_data.get("tao", {}).get("available", 0),
+                in_orders=balance_data.get("tao", {}).get("in_orders", 0),
+                for_total=balance_data.get("tao", {}).get("for_total", 0),
+                orders_count=tao_order_data.get("count", 0),
+                buy_sum=tao_order_data.get("buy_sum", 0),
+                sell_sum=tao_order_data.get("sell_sum", 0),
+                limit=tao_order_data.get("limit", 0)
+            
+            )
+        ]
         
-        ),
-        AssetBalance(
-            "DOT",
-            available=balance_data.get("dot", {}).get("available", 0),
-            in_orders=balance_data.get("dot", {}).get("in_orders", 0),
-            for_total=balance_data.get("dot", {}).get("for_total", 0),
-            orders_count=dot_order_data.get("count", 0),
-            buy_sum=dot_order_data.get("buy_sum", 0),
-            sell_sum=dot_order_data.get("sell_sum", 0),
-            limit=dot_order_data.get("limit", 0)
+        current_date = datetime.datetime.now().strftime('%d.%m.%Y')
+        header = f"<b>БАЛАНС</b> {current_date}\n\n"
+        total_balance_text = "\n".join(balance.to_text() for balance in balances)
+        total_usd_balances = sum(balance.available for balance in balances if balance.symbol in ['USDT', 'USDC'])
+        total_else_balances = sum(balance.for_total for balance in balances if balance.symbol not in ['USDT', 'USDC'])
         
-        )
-    ]
-    
-    current_date = datetime.datetime.now().strftime('%d.%m.%Y')
-    header = f"<b>БАЛАНС</b> {current_date}\n\n"
-    total_balance_text = "\n".join(balance.to_text() for balance in balances)
-    total_usd_balances = sum(balance.available for balance in balances if balance.symbol in ['USDT', 'USDC'])
-    total_else_balances = sum(balance.for_total for balance in balances if balance.symbol not in ['USDT', 'USDC'])
-    
-    summary = (f"\n<b>Итого:</b>\n"
-               f"<b>В ордерах:</b> {sum(balance.buy_sum for balance in balances):.2f} USD\n"
-               f"<b>После продажи:</b> {total_usd_balances + total_else_balances + (sum(balance.sell_sum for balance in balances)):.2f} USD")
-    
-    final_message = header + total_balance_text + summary
-    await bot.send_message(user_id, final_message)
+        summary = (f"\n<b>Итого:</b>\n"
+                   f"<b>В ордерах:</b> {sum(balance.buy_sum for balance in balances):.2f} USD\n"
+                   f"<b>После продажи:</b> {total_usd_balances + total_else_balances + (sum(balance.sell_sum for balance in balances)):.2f} USD")
+        
+        final_message = header + total_balance_text + summary
+        await bot.send_message(user_id, final_message)
+    except Exception as e:
+        await bot.send_message(ADMIN_ID, f'Ошибка при выведении баланса {e}')
+        await bot.send_message(653500570, f'Ошибка при выведении баланса {e}')

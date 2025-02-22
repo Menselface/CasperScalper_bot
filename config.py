@@ -15,6 +15,7 @@ PAIR_TABLE_MAP = {
     "KASUSDT": "orders",
     "BTCUSDC": "orders_btcusdc",
     "SUIUSDT": "sui_usdt_orders",
+    "TAOUSDT": 'tao_usdt_orders',
     "PYTHUSDT": "pyth_usdt_orders",
     "DOTUSDT": "orders_dot_usdt"
 }

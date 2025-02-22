@@ -44,6 +44,10 @@ class AccountMexcMethods:
         self.free_dot = 0
         self.locked_dot = 0
         self.total_after_sale_dot = 0
+        
+        self.free_tao = 0
+        self.locked_tao = 0
+        self.total_after_sale_tao = 0
     
     def _generate_signature(self, params: dict) -> str:
         query_string = urlencode(params)
@@ -208,6 +212,11 @@ class AccountMexcMethods:
                         self.free_dot = float(balance.get('free', 0))
                         self.locked_dot = float(balance.get('locked'))
                         self.total_after_sale_dot += (self.free_dot + self.locked_dot) * float(market_price['price'])
+                        
+                    elif asset == 'TAO':
+                        self.free_tao = float(balance.get('free', 0))
+                        self.locked_tao = float(balance.get('locked'))
+                        self.total_after_sale_tao += (self.free_dot + self.locked_dot) * float(market_price['price'])
                 
                 return account
             except (httpx.HTTPError, ValueError, IndexError):

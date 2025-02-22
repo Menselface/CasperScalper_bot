@@ -47,6 +47,10 @@ async def params_choice_symbol():
         callback_data=ParamsMyCallbackSymbol(level=1, action="symbol_SUIUSDT").pack()
     )
     keyboard.button(
+        text=f"TAO/USDT",
+        callback_data=ParamsMyCallbackSymbol(level=1, action="symbol_TAOUSDT").pack()
+    )
+    keyboard.button(
         text=f"PYTH/USDT",
         callback_data=ParamsMyCallbackSymbol(level=1, action="symbol_PYTHUSDT").pack()
     )
@@ -54,6 +58,7 @@ async def params_choice_symbol():
         text=f"DOT/USDT",
         callback_data=ParamsMyCallbackSymbol(level=1, action="symbol_DOTUSDT").pack()
     )
+    
     keyboard.button(
         text=f"Все пары",
         callback_data=ParamsMyCallbackSymbol(level=1, action="all_pairs").pack()
@@ -127,6 +132,7 @@ async def user_set_up_keyboard(user_id):
     sui_status = next((currency.get("SUIUSDT") for currency in user_data if "SUIUSDT" in currency), False)
     pyth_status = next((currency.get("PYTHUSDT") for currency in user_data if "PYTHUSDT" in currency), False)
     dot_status = next((currency.get("DOTUSDT") for currency in user_data if "DOTUSDT" in currency), False)
+    tao_status = next((currency.get("TAOUSDT") for currency in user_data if "TAOUSDT" in currency), False)
     
     builder = InlineKeyboardBuilder()
     builder.button(
@@ -140,6 +146,10 @@ async def user_set_up_keyboard(user_id):
     builder.button(
         text=f"SUI/USDT {'✅' if sui_status else '⬛️'}",
         callback_data=UserSymbolsConfig(level=1, action="symbol_SUIUSDT").pack()
+    )
+    builder.button(
+        text=f"TAO/USDT {'✅' if tao_status else '⬛️'}",
+        callback_data=UserSymbolsConfig(level=1, action="symbol_TAOUSDT").pack()
     )
     builder.button(
         text=f"PYTH/USDT {'✅' if pyth_status else '⬛️'}",

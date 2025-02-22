@@ -15,6 +15,7 @@ from trading.session_manager import manager_kaspa
 from utils.additional_methods import create_time, safe_format
 from utils.user_api_keys_checker import validation_user_keys
 from utils.user_buy_total import get_user_buy_sum
+from utils.validate_user_statsus import validate_user_status
 
 
 async def kaspa_trader(message: Message, bot: Bot, result: dict = None):
@@ -23,6 +24,11 @@ async def kaspa_trader(message: Message, bot: Bot, result: dict = None):
     user_secret_key = await get_secret_key(user_id)
     """Есть команда  СТОП?"""
     while True:
+        is_user_expired = await validate_user_status(message, user_id, symbol='KASUSDT', manager=manager_kaspa,
+                                                     bot=bot)
+        if is_user_expired:
+            await update_user_symbol_data(user_id, "KASUSDT", start_stop=False)
+            return
         if result:
             avg_price = result["avg_price"]
             actual_order_id = result["actual_order"]

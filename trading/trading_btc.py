@@ -14,8 +14,8 @@ from trading.db_querys.db_for_btc_table import delete_order_by_user_and_order_id
 from trading.db_querys.db_symbols_for_trade_methods import get_user_symbol_data, update_user_symbol_data
 from trading.session_manager import manager_btc
 from utils.additional_methods import create_time, safe_format
-from utils.user_api_keys_checker import validation_user_keys
 from utils.user_buy_total import get_user_buy_sum
+from utils.validate_user_statsus import validate_user_status
 
 
 async def btc_usdc_trader(message: Message, bot: Bot, result: dict = None):
@@ -24,10 +24,9 @@ async def btc_usdc_trader(message: Message, bot: Bot, result: dict = None):
     user_secret_key = await get_secret_key(user_id)
     """Есть команда  СТОП?"""
     while True:
-        check_api_keys = await validation_user_keys(user_api_keys, user_secret_key)
-        if not check_api_keys:
-            logger.warning(f"Пользователь {user_id}  некоректные ключи BTC/USDC")
-            await bot.send_message(user_id, f'Ошибка в апи ключах, сообщите в поддержку @Infinty_Support.')
+        is_user_expired = await validate_user_status(message, user_id, symbol='BTCUSDC', manager=manager_btc,
+                                                     bot=bot)
+        if is_user_expired:
             await update_user_symbol_data(user_id, "BTCUSDC", start_stop=False)
             return
         if result:
