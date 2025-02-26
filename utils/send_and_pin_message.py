@@ -7,6 +7,7 @@ from loguru import logger
 
 from db import get_all_id_with_registered_to_status, get_first_message
 from statistic import handle_stats
+from utils.statistic_for_admins import get_statistic_for_admin
 
 
 async def send_and_pin(bot: Bot):
@@ -22,3 +23,4 @@ async def send_and_pin(bot: Bot):
             logger.info(f"Message send and pin for user {user}")
         except Exception as e:
             logger.warning(f"Ошибка при отправке/закреплении сообщения: {e} to user {user}")
+    await get_statistic_for_admin(bot)

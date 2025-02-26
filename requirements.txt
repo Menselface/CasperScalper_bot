@@ -9,6 +9,7 @@ httpx
 apscheduler
 python-dotenv==1.0.1
 tradingview-ta==3.3.0
+openpyxl
 
 # pip install -r requirements.txt
 # .venv\Scripts\activate
