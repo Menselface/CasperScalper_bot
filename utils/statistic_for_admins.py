@@ -5,7 +5,7 @@ from aiogram.types import FSInputFile
 from loguru import logger
 from openpyxl import Workbook
 
-from config import PAIR_TABLE_MAP, ADMIN_ID, ADMIN_ID2
+from config import PAIR_TABLE_MAP, ADMIN_ID
 from db import get_all_id_with_registered_to_status, get_first_message, user_get_any
 from statistic import TradeStatistics
 
@@ -114,7 +114,7 @@ async def generate_excel_file(admin_data: dict):
 
 
 async def send_excel_to_admins(bot):
-    admin_ids = [ADMIN_ID, ADMIN_ID2]
+    admin_ids = [ADMIN_ID]
 
     filename = f"admin_stats_{datetime.today().strftime('%d_%m_%Y')}.xlsx"
 
