@@ -113,8 +113,14 @@ async def main():
             kwargs={'bot': bot}
         )
         logger.info("Закреп в 12.00 запущен")
-        
-        schedule.add_job(final_of_registration_date, kwargs={'bot': bot})
+
+        schedule.add_job(
+            final_of_registration_date,
+            trigger='cron',
+            hour=11,
+            minute=0,
+            kwargs={'bot': bot}
+        )
         logger.info("Проверка конца регистраций для пользователей запущенна")
         
         schedule.add_job(start_orders_checker, kwargs={'bot': bot})
