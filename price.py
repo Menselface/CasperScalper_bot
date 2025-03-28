@@ -32,6 +32,8 @@ async def handle_price(message):
                 prices[name] = f"{price:,.4f}"
             elif name == "DOT":
                 prices[name] = f"{price:,.3f}"
+            elif name == "TAO":
+                prices[name] = f"{price:,.4f}"
         except Exception as e:
             prices[name] = "N/A"
 

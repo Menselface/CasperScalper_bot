@@ -142,6 +142,7 @@ class AccountMexcMethods:
             'symbol': self.symbol,
             'timestamp': int(time.time() * 1000)
         }
+        params['signature'] = self._generate_signature(params)
         headers = self._get_headers()
         
         async with httpx.AsyncClient() as client:
