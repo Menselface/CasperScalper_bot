@@ -56,7 +56,7 @@ class BuySellOrders:
             spend_in_usdt_for_buy = order_buy_details.get('cummulativeQuoteQty')
             sui_price = await get_symbol_price(self.symbol)
             """                 Create price to sell here"""
-            price_to_sell = sui_price * (1 + percent_profit / 100)
+            price_to_sell = avg_price * (1 + (percent_profit + user_commission) / 100)
             qnty_for_sell = order_buy_details.get('executedQty')
             """                 Send order into database table 'orders'     """
             if float(qnty_for_sell) <= 0:
