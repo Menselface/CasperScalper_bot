@@ -155,7 +155,7 @@ async def user_restart_from_admin_panel(message: Message, bot: Bot):
     if tao:
         data = await get_all_open_sell_orders_autobuy_from_any_table(user_id, "TAOUSDT", status=1)
         result = await process_order_result(data)
-        task = asyncio.create_task(dot_trader(res, bot, result))
+        task = asyncio.create_task(tao_trader(res, bot, result))
         await update_user_symbol_data(user_id, "TAOUSDT", start_stop=True)
         tasks.append(task)
     
