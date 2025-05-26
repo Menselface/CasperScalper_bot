@@ -21,12 +21,12 @@ class RestartUserService:
         for user in users:
             try:
                 res = await get_users_repo.first_user_message_obj(user)
-                task = asyncio.create_task(
-                    self.restart_user_from_admin(res)
-                )
+                task = asyncio.create_task(self.restart_user_from_admin(res))
                 tasks.append(task)
             except Exception as e:
-                logger.warning(f"⚠️ Не удалось подготовить рестарт для user_id={user}: {e}")
+                logger.warning(
+                    f"⚠️ Не удалось подготовить рестарт для user_id={user}: {e}"
+                )
                 continue
 
         if notify_admin_id:
@@ -34,10 +34,9 @@ class RestartUserService:
             await AdminsMessageService.send_to_all_admins_message_text(msg, self.bot)
         await asyncio.gather(*tasks)
 
-
-
     async def restart_user_from_admin(self, user_data):
         from trading.start_trade import user_restart_from_admin_panel
+
         try:
             await user_restart_from_admin_panel(user_data, self.bot)
             logger.info(f"✅ Пользователь {user_data.from_user.id} успешно рестартован")

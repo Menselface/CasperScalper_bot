@@ -1,12 +1,12 @@
-
 import os
 
 from db_pack.DataBaseAsync import *
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # Токен бота Telegram
-TOKEN = os.getenv('TOKEN')
+TOKEN = os.getenv("TOKEN")
 
 BASE_URL = os.getenv("BASE_URL")
 
@@ -27,7 +27,7 @@ PAIR_TABLE_MAP = {
     "KASUSDT": "orders",
     "BTCUSDC": "orders_btcusdc",
     "SUIUSDT": "sui_usdt_orders",
-    "TAOUSDT": 'tao_usdt_orders',
+    "TAOUSDT": "tao_usdt_orders",
     "PYTHUSDT": "pyth_usdt_orders",
-    "DOTUSDT": "orders_dot_usdt"
+    "DOTUSDT": "orders_dot_usdt",
 }

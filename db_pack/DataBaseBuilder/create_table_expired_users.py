@@ -1,6 +1,8 @@
 import asyncio
 
-from config import db_async
+from db_pack.base import BaseRepositories
+
+db_async = BaseRepositories().pool
 
 create_table_query = """
     CREATE TABLE IF NOT EXISTS inactive_users (

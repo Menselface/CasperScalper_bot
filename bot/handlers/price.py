@@ -6,17 +6,18 @@ from aiogram.filters import Command
 
 price_router = Router(name=__name__)
 
-@price_router.message(Command('price'))
+
+@price_router.message(Command("price"))
 async def handle_price(message):
     user_id = message.from_user.id
 
     urls = {
-        "KASPA": 'https://api.mexc.com/api/v3/ticker/price?symbol=KASUSDT',
-        "BTC": 'https://api.mexc.com/api/v3/ticker/price?symbol=BTCUSDT',
-        "SUI": 'https://api.mexc.com/api/v3/ticker/price?symbol=SUIUSDT',
-        "PYTH": 'https://api.mexc.com/api/v3/ticker/price?symbol=PYTHUSDT',
-        "DOT": 'https://api.mexc.com/api/v3/ticker/price?symbol=DOTUSDT',
-        "TAO": 'https://api.mexc.com/api/v3/ticker/price?symbol=TAOUSDT'
+        "KASPA": "https://api.mexc.com/api/v3/ticker/price?symbol=KASUSDT",
+        "BTC": "https://api.mexc.com/api/v3/ticker/price?symbol=BTCUSDT",
+        "SUI": "https://api.mexc.com/api/v3/ticker/price?symbol=SUIUSDT",
+        "PYTH": "https://api.mexc.com/api/v3/ticker/price?symbol=PYTHUSDT",
+        "DOT": "https://api.mexc.com/api/v3/ticker/price?symbol=DOTUSDT",
+        "TAO": "https://api.mexc.com/api/v3/ticker/price?symbol=TAOUSDT",
     }
 
     prices = {}
@@ -25,7 +26,7 @@ async def handle_price(message):
             response = requests.get(url)
             response.raise_for_status()
             data = response.json()
-            price = float(data['price'])
+            price = float(data["price"])
             # Форматируем курс в зависимости от монеты
             if name == "KASPA":
                 prices[name] = f"{price:,.6f}"
@@ -40,8 +41,8 @@ async def handle_price(message):
         except Exception as e:
             prices[name] = "N/A"
 
-    current_time = datetime.datetime.now().strftime('%H:%M:%S')
-    current_date = datetime.datetime.now().strftime('%d.%m.%Y')
+    current_time = datetime.datetime.now().strftime("%H:%M:%S")
+    current_date = datetime.datetime.now().strftime("%d.%m.%Y")
 
     message_text = (
         f"MEXC курс на {current_date}\n\n"
@@ -53,4 +54,4 @@ async def handle_price(message):
         f"<b>TAO</b> - {prices['TAO']}"
     )
 
-    await message.answer(message_text, parse_mode='HTML')
+    await message.answer(message_text, parse_mode="HTML")

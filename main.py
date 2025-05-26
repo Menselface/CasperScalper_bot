@@ -26,73 +26,79 @@ dp.startup.register(on_startup)
 
 dp.include_routers(
     admin_router,
-            help_router,
-            order_status_router,
-            parameters_router,
-            price_router,
-            start_router,
-            statistic_router,
-            subscription_info_router,
-                    )
+    help_router,
+    order_status_router,
+    parameters_router,
+    price_router,
+    start_router,
+    statistic_router,
+    subscription_info_router,
+)
 
 
 async def main():
-    schedule = AsyncIOScheduler(timezone='Europe/Kiev')
+    schedule = AsyncIOScheduler(timezone="Europe/Kiev")
     bot_info = await bot.get_me()
-    logger.log("BOOT", f"Бот @{bot_info.username} id={bot_info.id} {await identify_myself()}")
+    logger.log(
+        "BOOT", f"Бот @{bot_info.username} id={bot_info.id} {await identify_myself()}"
+    )
     try:
         schedule.add_job(
             send_and_pin,
-            trigger='cron',
+            trigger="cron",
             hour=0,
             minute=0,
             start_date=datetime.now(),
-            kwargs={'bot': bot}
+            kwargs={"bot": bot},
         )
-        logger.log("BOOT","Закреп в 12.00 запущен")
+        logger.log("BOOT", "Закреп в 12.00 запущен")
 
         schedule.add_job(
             send_and_pin_month,
-            trigger='cron',
+            trigger="cron",
             hour=23,
             minute=59,
             start_date=datetime.now(),
-            kwargs={'bot': bot}
+            kwargs={"bot": bot},
         )
-        logger.log("BOOT","Закреп в 11.59 запущен")
+        logger.log("BOOT", "Закреп в 11.59 запущен")
 
         schedule.add_job(
             final_of_registration_date,
-            trigger='cron',
+            trigger="cron",
             hour=9,
             minute=0,
-            kwargs={'bot': bot}
+            kwargs={"bot": bot},
         )
-        logger.log("BOOT","Проверка конца регистраций для пользователей запущенна")
-        
-        schedule.add_job(start_orders_checker, trigger='interval', minutes=5, kwargs={'bot': bot})
-        schedule.add_job(start_session_revival, trigger='interval', minutes=15, kwargs={'bot': bot})
-        schedule.add_job(remove_inactive_users, trigger='cron', hour=9, minute=0)
+        logger.log("BOOT", "Проверка конца регистраций для пользователей запущенна")
+
+        schedule.add_job(
+            start_orders_checker, trigger="interval", minutes=5, kwargs={"bot": bot}
+        )
+        schedule.add_job(
+            start_session_revival, trigger="interval", minutes=15, kwargs={"bot": bot}
+        )
+        schedule.add_job(remove_inactive_users, trigger="cron", hour=9, minute=0)
         schedule.start()
         await bot.delete_webhook(drop_pending_updates=True)
         await dp.start_polling(bot)
-    
+
     except KeyboardInterrupt:
-        logger.log("BOOT","Bot stopped by user.")
+        logger.log("BOOT", "Bot stopped by user.")
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
     finally:
         if schedule.running:
             schedule.shutdown(wait=False)
-            logger.log("BOOT","Scheduler stopped.")
+            logger.log("BOOT", "Scheduler stopped.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import asyncio
-    
+
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        logger.log("BOOT","Bot stopped by user.")
+        logger.log("BOOT", "Bot stopped by user.")
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")

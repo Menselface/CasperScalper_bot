@@ -16,6 +16,7 @@ class BaseMexcAPI:
         secret_key = await user_repo.secret_key(user_id)
         return cls(user_id, api_key, secret_key)
 
+
 #
 # async def main():
 #     sd = await BaseMexcAPI.create(653500570)

@@ -5,8 +5,7 @@ from aiogram.types import Message
 help_router = Router(name=__name__)
 
 
-
-@help_router.message(Command('help'))
+@help_router.message(Command("help"))
 async def help_command(message: Message):
     help_text = (
         "<b>Infinity Bot Pro v.2.250 12-05-2025</b>\n\n"
@@ -17,4 +16,4 @@ async def help_command(message: Message):
         "5. Поддержка: <a href='https://t.me/Infinty_Support'>@Support_Infinity_Bot</a>"
     )
 
-    await message.reply(help_text, parse_mode='HTML', disable_web_page_preview=True)
+    await message.reply(help_text, parse_mode="HTML", disable_web_page_preview=True)

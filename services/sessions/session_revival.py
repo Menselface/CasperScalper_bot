@@ -5,18 +5,23 @@ from loguru import logger
 
 from db_pack.repositories.symbols_for_trade import GetSymbolForTradeRepo
 from services.admins.admins_message import AdminsMessageService
-from trading.session_manager import UserSessionManager, manager_tao, manager_dot, manager_btc, manager_sui, manager_pyth, manager_kaspa
+from trading.session_manager import (
+    UserSessionManager,
+    manager_tao,
+    manager_dot,
+    manager_btc,
+    manager_sui,
+    manager_pyth,
+    manager_kaspa,
+)
 
 
-class SessionRevive:
-    ...
+class SessionRevive: ...
 
 
 class SessionInspector(SessionRevive):
-    SYMBOL_MAP = {
-        "kaspa": "KASUSDT",
-        "btc": "BTCUSDC"
-    }
+    SYMBOL_MAP = {"kaspa": "KASUSDT", "btc": "BTCUSDC"}
+
     @classmethod
     def get_active_symbols_for_user(cls, user_id: int):
         active_symbols = []
@@ -31,9 +36,7 @@ class SessionInspector(SessionRevive):
 
     @classmethod
     def get_all_active_sessions(cls, users: list[int]) -> dict[int, list[str]]:
-        return {
-            user_id: cls.get_active_symbols_for_user(user_id) for user_id in users
-        }
+        return {user_id: cls.get_active_symbols_for_user(user_id) for user_id in users}
 
     @staticmethod
     async def return_inactive_sessions() -> dict[int, list[str]]:
@@ -54,10 +57,11 @@ class SessionInspector(SessionRevive):
 
             if missing_symbols:
                 result[user_id] = missing_symbols
-                logger.warning(f"⚠️ User {user_id} has no active sessions for: {missing_symbols}")
+                logger.warning(
+                    f"⚠️ User {user_id} has no active sessions for: {missing_symbols}"
+                )
 
         return result
-
 
 
 async def start_session_revival(bot: Bot):
