@@ -1,13 +1,11 @@
 import asyncio
-from datetime import datetime
 
-from aiogram import types, Bot
+from aiogram import Bot
 import aiohttp
 
 from tradingview_ta import Interval, TA_Handler
 
 from config import PAIR_TABLE_MAP, ADMIN_ID
-from db import get_all_id_with_registered_to_status, get_first_message
 
 
 # Получаем данные по сигналу через TradingView_TA (фейковый метод)

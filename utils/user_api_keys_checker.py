@@ -3,8 +3,8 @@ import random
 
 from loguru import logger
 
-from all_mexc_methods.AccountMexc import AccountMexcMethods
-from db import get_access_key, get_secret_key
+from services.mexc_api.all_mexc_methods.AccountMexc import AccountMexcMethods
+from db_pack.db import get_secret_key, get_access_key
 
 
 async def validation_user_keys(user_id):
@@ -27,6 +27,9 @@ async def validation_user_keys(user_id):
                     return False
                 if res.get('msg') == 'Api key info invalid':
                     return False
+                # if "not in the ip white list" in res.get("msg"):
+                #     logger.warning(f"Пользователь {user_id} Ошибка блока по айпи\n {res.get('msg')}")
+                #     return False
                 return True
 
         except Exception as e:
@@ -38,3 +41,4 @@ async def validation_user_keys(user_id):
 
     logger.critical(f"All {retries} attempts failed. Returning False.")
     return False
+        

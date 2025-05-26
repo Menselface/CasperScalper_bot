@@ -105,7 +105,7 @@ async def update_order_by_order_id_any_table(symbol: str, user_id: int, orderId:
                                     autobay = $13
                                 WHERE telegram_id_market = $1 AND order_id = $2 """
         
-        await db_async.fetch(query,
+        await db_async.execute(query,
                              user_id,
                              orderId,
                              time_sell,

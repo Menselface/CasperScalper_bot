@@ -4,16 +4,12 @@ import traceback
 from loguru import logger
 from mexc_api.common.enums import Side, OrderType
 
-from all_mexc_methods.mexc_methods import CreateSpotConn
-from db import get_info_percent_profit, get_info_commission_percent
+from services.mexc_api.all_mexc_methods.mexc_methods import CreateSpotConn
 from trading.buy_sell_methods.buy_sell import get_symbol_price
-from trading.db_querys.db_for_btc_table import update_all_not_autobuy, set_order_buy_in_db, \
-    update_order_by_order_id, get_buy_price, spend_in_usdt_for_buy_order
 from trading.db_querys.db_methods_for_sui import update_all_not_autobuy_any_table, set_order_buy_any_table, \
     update_order_by_order_id_any_table, get_buy_price_any_table, spend_in_usdt_for_buy_order_any_table
 from trading.db_querys.db_symbols_for_trade_methods import get_user_symbol_data
-from utils.additional_methods import create_time, notify_admin, safe_format, user_message_returner, \
-    user_buy_message_returner
+from utils.additional_methods import create_time, notify_admin, user_buy_message_returner
 
 
 class BuySellOrders:
@@ -35,7 +31,6 @@ class BuySellOrders:
     
     async def open_market_order_buy(self, bot, buy_market: bool = False):
         percent_profit = await get_user_symbol_data(self.user_id, self.symbol, "percent_profit")
-        user_commission = await get_info_commission_percent(self.user_id)
         
         try:
             if not buy_market:
@@ -56,13 +51,13 @@ class BuySellOrders:
             spend_in_usdt_for_buy = order_buy_details.get('cummulativeQuoteQty')
             sui_price = await get_symbol_price(self.symbol)
             """                 Create price to sell here"""
-            price_to_sell = avg_price * (1 + (percent_profit + user_commission) / 100)
+            price_to_sell = avg_price * (1 + percent_profit / 100)
             qnty_for_sell = order_buy_details.get('executedQty')
             """                 Send order into database table 'orders'     """
             if float(qnty_for_sell) <= 0:
                 while float(qnty_for_sell) <= 0:
                     qnty_for_sell = order_buy_details.get('executedQty')
-                    price_to_sell = avg_price * (1 + (percent_profit + user_commission) / 100)
+                    price_to_sell = avg_price * (1 + percent_profit / 100)
             if buy_market:
                 autobuy = 9
             else:
@@ -85,22 +80,26 @@ class BuySellOrders:
             if "Insufficient position" in str(e):
                 await bot.send_message(
                     chat_id=self.user_id,
-                    text='Недостаточно USDT для совершения покупки.\nНастраивается в /parameters.',
+                    text=f'Недостаточно {self.symbol} для совершения покупки. \nНастраивается в /parameters.',
                     parse_mode='HTML')
                 logger.info(
-                    f"Пользователь {self.user_id}:Недостаточно USDT для совершения покупки")
+                    f"Пользователь {self.user_id}:Недостаточно {self.symbol} для совершения покупки")
                 return None, None, 'not_money'
             elif "429" in str(e) or "Too Many Requests" in str(e):
                 logger.warning(
-                    f"Too Many Requests для пользователя {self.user_id}")
+                    f"Too Many Requests для пользователя {self.symbol} {self.user_id}")
                 await asyncio.sleep(2)
                 return None, None, "Error 429"
+            elif "400" in str(e):
+                logger.warning(
+                    f"Error 400 для пользователя {self.user_id}")
+                await asyncio.sleep(2)
+                return None, None, "Error 400"
             else:
-                logger.critical(f"Ошибка у пользователя {self.user_id}: {str(e)}")
-                logger.critical(f"Ошибка у пользователя {self.user_id}: {str(e)}")
+                logger.critical(f"Ошибка у пользователя {self.symbol} {self.user_id}: {str(e)}")
                 logger.critical("Подробности ошибки:\n" + traceback.format_exc())
                 logger.opt(exception=True).critical("Детальный стек вызовов")
-                await notify_admin(self.user_id, str(e), bot)
+                await notify_admin(user_id=self.user_id, symbol=self.symbol, error_msg=str(e), bot=bot)
                 return None, None, "critical_error"
     
     async def open_limit_order_sell(self, user_id, order_buy_id, qnty_for_sell, price_to_sell, bot,
@@ -150,10 +149,15 @@ class BuySellOrders:
             except Exception as e:
                 if "429" in str(e) or "Too Many Requests" in str(e):
                     logger.warning(
-                        f"Too Many Requests для пользователя {self.user_id}")
+                        f"Too Many Requests для пользователя{self.symbol} {self.user_id}")
+                    await asyncio.sleep(2)
+                    continue
+                elif "400" in str(e):
+                    logger.warning(
+                        f"Error 400 для пользователя {self.user_id}")
                     await asyncio.sleep(2)
                     continue
                 else:
                     logger.critical(f"Ошибка у пользователя {self.user_id}: {str(e)}")
-                    await notify_admin(self.user_id, str(e), bot)
+                    await notify_admin(user_id=self.user_id, symbol=self.symbol, error_msg=str(e), bot=bot)
                     return {"actual_order": None, "avg_price": None, 'Error 429': False, "critical_error": True}

@@ -5,3 +5,4 @@ __pycache__/
 /logs
 .logers
 config.py
+.test.py

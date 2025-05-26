@@ -1,18 +1,18 @@
 import datetime
-import os
-import shutil
+import json
 
+import httpx
 import pytz
 from aiogram import Bot
-from aiogram.types import FSInputFile
 from loguru import logger
 
-from all_mexc_methods.mexc_methods import CreateSpotConn
+from services.mexc_api.all_mexc_methods.mexc_methods import CreateSpotConn
 from config import PAIR_TABLE_MAP
-from db import get_all_open_sell_orders, get_all_admins
-from db import get_all_open_sell_orders_autobuy
-from db import get_secret_key, get_access_key
-from trading.session_manager import manager_kaspa, manager_btc, manager_sui, manager_pyth, manager_dot
+from db_pack.db import get_all_open_sell_orders
+from db_pack.db import get_all_open_sell_orders_autobuy
+from db_pack.db import get_secret_key, get_access_key
+from services.admins.admins_message import AdminsMessageService
+from trading.session_manager import manager_kaspa, manager_btc, manager_sui, manager_pyth, manager_dot, manager_tao
 
 
 async def check_user_last_autobuy_for_reset(user_id):
@@ -73,35 +73,22 @@ async def update_result_if_have_order_autobuy(user_id):
         result.update({'actual_order': sorted_records['order_id_limit'], 'avg_price': sorted_records['priceorderbuy']})
     return result
 
-async def create_logs():
-    LOGS_DIR = "logs"
-    if os.path.exists(LOGS_DIR):
-        shutil.rmtree(LOGS_DIR)
-    user_log_file = f"{LOGS_DIR}/logers.log"
-    if not os.path.exists(LOGS_DIR):
-        os.makedirs(LOGS_DIR)
-    if not os.path.exists(user_log_file):
-        logger.add(user_log_file, rotation="10 MB", retention="5 days", compression="gz", level="INFO")
 
-async def notify_admin(user_id, error_msg, bot: Bot):
-    log_file = f'logs/logers.log'
-    temp_log_file = f'logs/logers_сopy.log'
-    shutil.copy(log_file, temp_log_file)
-    user_agreements = FSInputFile('logs/logers_сopy.log', filename='logers_сopy.log')
-    all_admins = await get_all_admins()
-    for admin_id in all_admins:
-        try:
-            await bot.send_document(
-                chat_id=admin_id,
-                document=user_agreements,
-                caption=f"❗️ У пользователя {user_id} произошла ошибка. ❗️\nОшибка: {error_msg}\nЛоги за последние два дня прикреплены.")
-        
-        except Exception as e:
-            logger.critical(f"Не могу скинуть файл {e} ")
-    os.remove(temp_log_file)
+async def notify_admin(user_id, error_msg, bot: Bot, symbol: str = None):
+    admin_message = AdminsMessageService()
+    msg = f"❗️ У пользователя {user_id} произошла ошибка. ❗️\nОшибка: {error_msg}\nЛоги за последние два дня прикреплены."
+    if symbol:
+        await admin_message.send_admin_user_logger_file(user_id, symbol, bot, msg)
+    else:
+        await admin_message.send_admin_main_logger_file(bot, msg)
 
 
-def safe_format(value, precision):
+def safe_format(value: int | float = 0, precision: int = 2):
+    """
+    Ставит количество знаков после запятой для любого числа
+    :param value : int | float - значение которое мы передаем
+    :param precision : int - кол-во знаков после запятой
+    """
     try:
         return f"{float(value):.{precision}f}"
     except (ValueError, TypeError):
@@ -191,6 +178,8 @@ async def user_active_pair(user_id, pair):
         return manager_sui.is_active(user_id)
     elif pair == "PYTHUSDT":
         return manager_pyth.is_active(user_id)
+    elif pair == "TAOUSDT":
+        return manager_tao.is_active(user_id)
     else:
         return manager_dot.is_active(user_id)
     
@@ -200,3 +189,16 @@ def find_pair(symbol):
         if key.startswith(symbol):
             return key
     return None
+
+async def identify_myself() -> str:
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get("https://ipapi.co/json/")
+            location = json.loads(response.text)
+            return (
+                f'IP: {location["ip"]}, '
+                f'Location: {location["city"]}, '
+                f'{location["country_name"]}'
+            )
+    except:
+        return "Unknown IP"

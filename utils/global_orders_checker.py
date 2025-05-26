@@ -1,7 +1,7 @@
 from loguru import logger
 
-from all_mexc_methods.AccountMexc import AccountMexcMethods
-from db import get_access_key, get_secret_key, get_all_open_sell_orders_autobuy, delete_order_by_user_and_order_id
+from services.mexc_api.all_mexc_methods.AccountMexc import AccountMexcMethods
+from db_pack.db import get_access_key, get_secret_key, get_all_open_sell_orders_autobuy, delete_order_by_user_and_order_id
 
 
 async def global_orders_checker_for_user(user_id ):

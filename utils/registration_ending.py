@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from aiogram import Bot
 
-from db import status_of_ending_of_registration
+from db_pack.db import status_of_ending_of_registration
 
 
 async def final_of_registration_date(bot: Bot):

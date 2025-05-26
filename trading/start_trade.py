@@ -4,9 +4,9 @@ from aiogram import Bot, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 
-from db import get_first_message, get_all_open_sell_orders_autobuy, set_reset_autobuy, \
+from db_pack.db import get_first_message, get_all_open_sell_orders_autobuy, set_reset_autobuy, \
     get_all_open_sell_orders_autobuy_from_any_table
-from keyboards import StartTrade
+from bot.keyboards.keyboards import StartTrade
 from trading.db_querys.db_for_btc_table import get_all_open_sell_orders_autobuy_btc
 from trading.db_querys.db_symbols_for_trade_methods import get_symbols_for_keyboard, update_user_symbol_data
 from trading.sesison_manager_start_stop import user_start_stop
@@ -19,7 +19,6 @@ from trading.trading_tao import tao_trader
 from utils.additional_methods import process_order_result, format_symbol
 
 user_start_trade = Router()
-
 
 @user_start_trade.callback_query(StartTrade.filter())
 async def user_set_up_callbacks(callback: CallbackQuery, callback_data: StartTrade, bot: Bot, state: FSMContext):
@@ -52,7 +51,9 @@ async def user_set_up_callbacks(callback: CallbackQuery, callback_data: StartTra
             tasks.append(task)
         elif not btc_status and btc:
             await update_user_symbol_data(user_id, "BTCUSDC", start_stop=False)
-        
+           
+            
+
         if kaspa_status and not kaspa:
             task = asyncio.create_task(kaspa_trader(res, bot))
             await update_user_symbol_data(user_id, "KASUSDT", start_stop=True)
@@ -66,14 +67,14 @@ async def user_set_up_callbacks(callback: CallbackQuery, callback_data: StartTra
             tasks.append(task)
         elif not sui_status and sui:
             await update_user_symbol_data(user_id, "SUIUSDT", start_stop=False)
-        
+            
         if pyth_status and not pyth:
             task = asyncio.create_task(pyth_trader(res, bot))
             await update_user_symbol_data(user_id, "PYTHUSDT", start_stop=True)
             tasks.append(task)
         elif not pyth_status and pyth:
             await update_user_symbol_data(user_id, "PYTHUSDT", start_stop=False)
-        
+            
         if dot_status and not dot:
             task = asyncio.create_task(dot_trader(res, bot))
             await update_user_symbol_data(user_id, "DOTUSDT", start_stop=True)
@@ -87,7 +88,7 @@ async def user_set_up_callbacks(callback: CallbackQuery, callback_data: StartTra
             tasks.append(task)
         elif not tao_status and tao:
             await update_user_symbol_data(user_id, "TAOUSDT", start_stop=False)
-        
+            
         await bot.send_message(
             chat_id=user_id,
             text=result_text
@@ -95,19 +96,18 @@ async def user_set_up_callbacks(callback: CallbackQuery, callback_data: StartTra
         await asyncio.gather(*tasks)
         return
 
-
 async def generate_status_text(user_id):
     user_data = await user_start_stop.get_session_data(user_id)
-    
+
     statuses = [
         f"Торговля для пары {format_symbol(symbol)} {'✅ торгует' if status else '⬛️ OFF'}"
         for item in user_data
         for symbol, status in item.items()
     ]
-    
+
     if all(not any(item.values()) for item in user_data):
         return "❗️Вся торговля остановлена❗️"
-    
+
     return "\n".join(statuses)
 
 
@@ -158,6 +158,6 @@ async def user_restart_from_admin_panel(message: Message, bot: Bot):
         task = asyncio.create_task(tao_trader(res, bot, result))
         await update_user_symbol_data(user_id, "TAOUSDT", start_stop=True)
         tasks.append(task)
-    
+
     await set_reset_autobuy(user_id, 0)
     await asyncio.gather(*tasks)

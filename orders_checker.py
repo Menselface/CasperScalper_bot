@@ -1,18 +1,17 @@
-import asyncio
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from aiogram import Bot
 from aiogram.types import Message
 from loguru import logger
 
-from all_mexc_methods.AccountMexc import AccountMexcMethods
+from services.mexc_api.all_mexc_methods.AccountMexc import AccountMexcMethods
 from config import PAIR_TABLE_MAP, ADMIN_ID
-from db import get_access_key, get_secret_key, \
-    update_order_after_sale_by_order_id_any_table, get_info_commission_percent, \
-    get_totalamountonpurchace_from_any_table, get_order_id_limit_from_any_table, get_all_id_with_registered_to_status, \
+from db_pack.db import get_access_key, get_secret_key, \
+    update_order_after_sale_by_order_id_any_table, get_totalamountonpurchace_from_any_table, get_order_id_limit_from_any_table, get_all_id_with_registered_to_status, \
     get_first_message, get_all_open_sell_orders_autobuy_from_any_table_for_checker, \
     delete_order_by_user_and_order_id_from_any_table
+from services.orders_checker import CountOrderCommission
 from utils.additional_methods import create_time, user_message_returner
 from utils.user_api_keys_checker import validation_user_keys
 
@@ -23,7 +22,7 @@ class OrdersChecker:
         self.user = None
         self.api_key = None
         self.api_secret = None
-    
+        
     async def user_authorization(self, user_id):
         api_key = await get_access_key(user_id)
         api_secret = await get_secret_key(user_id)
@@ -64,8 +63,7 @@ class OrdersChecker:
                     error_message = str(e)
                     if "Order lost in the echo" in error_message:
                         logger.info(f"Ордер попал в исключение - Удаляем и концы в воду.{record} \n{e}")
-                        await delete_order_by_user_and_order_id_from_any_table(table_name, self.user,
-                                                                               record['order_id'])
+                        await delete_order_by_user_and_order_id_from_any_table(table_name, self.user, record['order_id'])
                         continue
                     else:
                         logger.warning(f"Ошибка при обработке ордера: {record} - {e}")
@@ -126,7 +124,7 @@ class OrdersChecker:
                 filtered_data[pair] = local_orders
                 logger.info(f"Нет открытых ордеров от биржи для пары {pair}. Оставляем локальные ордера без изменений.")
                 continue
-            
+                
             exchange_orders = [
                 order.get("orderId")
                 for order in active_orders_from_exchange
@@ -144,9 +142,10 @@ class OrdersChecker:
         return filtered_data
     
     async def fill_orders_to_tables(self,
-                                    user_id: int,
-                                    orders_result: dict,
-                                    ):
+            user_id: int,
+            orders_result: dict,
+    ):
+
         closed_orders = {}
         
         for pair, orders in orders_result.items():
@@ -168,19 +167,15 @@ class OrdersChecker:
                         price_to_sell = order["price"]
                         total_after_sale = order["origQuoteOrderQty"]
                         totalamountonpurchace = await get_totalamountonpurchace_from_any_table(table_name, order_buy_id)
-                        
-                        user_commission = await get_info_commission_percent(user_id)
-                        fee_limit_order = (
-                                (float(qnty_for_sell) * float(price_to_sell) - float(totalamountonpurchace))
-                                * (1 - float(user_commission) / 100)
-                        )
+                        fee = await CountOrderCommission(self.user, order_buy_id, pair).return_commission_total_result()
+
+                        fee_limit_order = (float(qnty_for_sell)  * float(price_to_sell) - float(totalamountonpurchace) - fee)
                         
                         account_info = await self.mexc.get_account_info_()
                         slice_last_4 = slice(-4, None)
                         slice_first_3 = slice(0, 3)
                         total_balance_usdt = await self.get_asset_balance(account_info, pair, slice_last_4)
-                        total_open_trades = len(
-                            await AccountMexcMethods(self.api_key, self.api_secret).get_open_orders()) or 0
+                        total_open_trades = len(await AccountMexcMethods(self.api_key, self.api_secret).get_open_orders()) or 0
                         btc_in_orders = await self.get_asset_balance(account_info, pair, slice_first_3, "locked")
                         total_free_usdt = await self.get_asset_balance(account_info, pair, slice_first_3, "free")
                         
@@ -205,54 +200,65 @@ class OrdersChecker:
                 
                 except Exception as e:
                     logger.error(f"Ошибка при обработке ордера {order}: {e}")
+                    continue
         
         logger.info(f"Пользователю {user_id} возвращены результаты: {closed_orders}")
         
         return closed_orders
+    
 
 
 async def start_orders_checker(bot: Bot):
-    while True:
-        today = datetime.today().date()
-        active_users = await get_all_id_with_registered_to_status(today)
-        for user in active_users:
-            message = await get_first_message(user)
-            user_id = message.from_user.id
-            all_data = {}
-            for pair, table in PAIR_TABLE_MAP.items():
-                all_data[pair] = await get_all_open_sell_orders_autobuy_from_any_table_for_checker(user_id, pair)
-            if all(not orders for orders in all_data.values()):
-                logger.info(f"User {user_id}: all_data пустой, пропускаем.")
-                continue
-            try:
-                start_time = int((time.time() - 24 * 60 * 60) * 1000)
-                mexc = OrdersChecker()
-                await mexc.user_authorization(user_id)
-                filtered_orders = await mexc.filter_active_orders(all_data)
-                
-                orders = await mexc.get_orders_from_exchange(user_id, start_time)
-                result, not_found = await mexc.compare_orders(filtered_orders, orders)
+    today = datetime.today().date()
+    date_to = today - timedelta(days=11)
+    active_users = await get_all_id_with_registered_to_status(date_to)
+    for user in active_users:
+        message = await get_first_message(user)
+        user_id = message.from_user.id
+        all_data = {}
+        for pair, table in PAIR_TABLE_MAP.items():
+            all_data[pair] = await get_all_open_sell_orders_autobuy_from_any_table_for_checker(user_id, pair)
+        if all(not orders for orders in all_data.values()):
+            logger.info(f"User {user_id}: all_data пустой, пропускаем.")
+            continue
+        check_api_keys = await validation_user_keys(user_id)
+        if not check_api_keys:
+            logger.warning(f"Пользователь {user_id}  некоректные ключи")
+            await bot.send_message(ADMIN_ID, f'Ошибка в апи ключах {user_id}.')
+            return
+
+
+
+        try:
+            start_time = int((time.time() - 24 * 60 * 60) * 1000)
+            mexc = OrdersChecker()
+            await mexc.user_authorization(user_id)
+            filtered_orders = await mexc.filter_active_orders(all_data)
+
+            orders = await mexc.get_orders_from_exchange(user_id, start_time)
+            result, not_found = await mexc.compare_orders(filtered_orders, orders)
+            res = await mexc.fill_orders_to_tables(user_id, result)
+            await send_messages_to_user(message, bot, res)
+            if not_found:
+                result = await mexc.processing_not_found(not_found)
                 res = await mexc.fill_orders_to_tables(user_id, result)
                 await send_messages_to_user(message, bot, res)
-                if not_found:
-                    result = await mexc.processing_not_found(not_found)
-                    res = await mexc.fill_orders_to_tables(user_id, result)
-                    await send_messages_to_user(message, bot, res)
-            
-            
-            
-            except Exception as e:
-                logger.info(f"User {user_id} - {e}")
-                continue
-        await asyncio.sleep(360)
 
 
+
+        except Exception as e:
+            logger.info(f"User {user_id} - {e}")
+            continue
+    
+    
+    
 async def send_messages_to_user(message: Message, bot: Bot, orders: dict):
     user_id = message.from_user.id
     for pair, orders_list in orders.items():
         table_name = PAIR_TABLE_MAP.get(pair)
         try:
             for order in orders_list:
+
                 res = await get_order_id_limit_from_any_table(table_name, user_id, order)
                 order_buy_id = res['order_id']
                 qnty_for_sell = res['qtytosell']
@@ -267,7 +273,6 @@ async def send_messages_to_user(message: Message, bot: Bot, orders: dict):
                     pair
                 )
                 await message.answer(user_message, parse_mode="HTML").as_(bot)
-                print(user_message)
                 logger.info(f"Отправили сообщение {order_buy_id}")
         except Exception as e:
             logger.info(f"Ошибка при отправке сообшения {e}")

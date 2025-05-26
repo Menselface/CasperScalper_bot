@@ -5,9 +5,9 @@ from aiogram.types import FSInputFile
 from loguru import logger
 from openpyxl import Workbook
 
-from config import PAIR_TABLE_MAP, ADMIN_ID
-from db import get_all_id_with_registered_to_status, get_first_message, user_get_any
-from statistic import TradeStatistics
+from config import PAIR_TABLE_MAP, ADMIN_ID, ADMIN_ID2
+from db_pack.db import get_all_id_with_registered_to_status, get_first_message, user_get_any
+from bot.handlers.statistic import TradeStatistics
 
 
 class AdminTradeStatistics(TradeStatistics):
@@ -52,7 +52,9 @@ async def get_statistic_for_admin(bot):
         user_id = res.from_user.id
         try:
             id_ = await user_get_any(user_id, id='id')
-            user_name = await user_get_any(user_id, username='username') or 'No name'
+            user_name = await user_get_any(user_id, username='username')
+            if user_name == "Нет":
+                user_name = await user_get_any(user_id, first_name='first_name')
             date_of_registration = await user_get_any(user_id, registered_at='registered_at')
             end_of_subscription = await user_get_any(user_id, registered_to='registered_to')
 
@@ -70,22 +72,23 @@ async def get_statistic_for_admin(bot):
         except Exception as e:
             logger.warning(f"Ошибка при формировании статистики для пользователя {user}: {e}")
 
-    await generate_excel_file(admin_data)
-    await send_excel_to_admins(bot)
+    await generate_excel_file(admin_data, yesterday)
+    await send_excel_to_admins(bot, yesterday)
 
 
-async def generate_excel_file(admin_data: dict):
 
+async def generate_excel_file(admin_data: dict, today: datetime.date):
     wb = Workbook()
     day_sheet = wb.active
-    day_sheet.title = "Дневная"
-    month_sheet = wb.create_sheet("Месяц")
-    all_time_sheet = wb.create_sheet("Все время")
+    day_sheet.title = "day"
+    month_sheet = wb.create_sheet("month")
+    all_time_sheet = wb.create_sheet("all_time")
 
     headers = ["ID", "Username", "Дата регистрации", "Подписка до"]
     for pair in PAIR_TABLE_MAP.keys():
-        headers.append(pair)
-    headers.append("Всего")
+        headers.append(f"{pair} - Сделок")
+        headers.append(f"{pair} - Прибыль")
+    headers.extend(["Всего Сделок", "Всего Прибыль"])
 
     for sheet in [day_sheet, month_sheet, all_time_sheet]:
         sheet.append(headers)
@@ -101,22 +104,36 @@ async def generate_excel_file(admin_data: dict):
         for period, sheet in zip(["day", "month", "all_time"], [day_sheet, month_sheet, all_time_sheet]):
             stats = info["orders"][period]
             row = base_data.copy()
+
             for pair in PAIR_TABLE_MAP.keys():
                 pair_stats = stats["data"].get(pair, {"count": 0, "profit": 0.0})
-                row.append(f"{round(pair_stats['profit'], 2)} ({pair_stats['count']})")
+                row.append(pair_stats["count"])
+                row.append(pair_stats["profit"])
 
-            row.append(f"{round(stats['total']['profit'], 2)} ({stats['total']['count']})")
+            row.extend([stats["total"]["count"], round(stats["total"]["profit"], 2)])
             sheet.append(row)
+    for sheet in [day_sheet, month_sheet, all_time_sheet]:
+        for col in sheet.columns:
+            max_length = 0
+            col_letter = col[0].column_letter
+            for cell in col:
+                try:
+                    if cell.value:
+                        max_length = max(max_length, len(str(cell.value)))
+                except (AttributeError, TypeError):
+                    logger.warning(f"Ошибка при обработке ширины столбца {col_letter}")
+            sheet.column_dimensions[col_letter].width = max_length + 2
 
-    filename = f"admin_stats_{datetime.today().strftime('%d_%m_%Y')}.xlsx"
+    filename = f"admin_stats_{today.strftime('%d_%m_%Y')}.xlsx"
     wb.save(filename)
     logger.info(f"Excel файл сохранен: {filename}")
 
 
-async def send_excel_to_admins(bot):
-    admin_ids = [ADMIN_ID]
 
-    filename = f"admin_stats_{datetime.today().strftime('%d_%m_%Y')}.xlsx"
+async def send_excel_to_admins(bot, today: datetime.date):
+    admin_ids = [ADMIN_ID, ADMIN_ID2]
+
+    filename = f"admin_stats_{today.strftime('%d_%m_%Y')}.xlsx"
 
     if not os.path.exists(filename):
         logger.error(f"Excel файл {filename} не найден!")
@@ -129,7 +146,7 @@ async def send_excel_to_admins(bot):
                 await bot.send_document(
                     chat_id=admin,
                     document=file_to_send,
-                    caption="Статистика за день",
+                    caption="Статистика 📊",
                     disable_notification=True
                 )
                 logger.info(f"Excel файл успешно отправлен админу {admin}")

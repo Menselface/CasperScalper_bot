@@ -4,11 +4,12 @@ from loguru import logger
 class UserSessionManager:
     def __init__(self):
         self.sessions = {}
-    
+
     def set_active(self, user_id: int):
         """Отметить пользователя как активного."""
-        self.sessions[user_id] = True
-        logger.info(f"User {user_id} marked as active.")
+        if user_id not in self.sessions:
+            self.sessions[user_id] = True
+            logger.info(f"User {user_id} marked as active.")
     
     def delete_user(self, user_id: int):
         """Удалить пользователя из сессии (сделать неактивным)."""

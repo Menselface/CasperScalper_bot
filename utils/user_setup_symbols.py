@@ -1,26 +1,31 @@
 from aiogram import Bot, Router
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from loguru import logger
 
 from config import PAIR_TABLE_MAP, ADMIN_ID
-from keyboards import user_set_up_keyboard, UserSymbolsConfig
-from parameters import delete_message
-from trading.db_querys.db_symbols_for_trade_methods import user_get_any_symbols, get_user_exist_with_symbol, user_update_symbols, \
-    user_update_by_symbol, add_user, user_get_any_by_symbol
-from trading.sesison_manager_start_stop import UserSessionManagerStartStop, user_start_stop
+from bot.handlers.start import check_status_of_registration
+from bot.keyboards.keyboards import user_set_up_keyboard, UserSymbolsConfig
+from bot.handlers.parameters import delete_message
+from trading.db_querys.db_symbols_for_trade_methods import get_user_exist_with_symbol, add_user
+from trading.sesison_manager_start_stop import user_start_stop
 from utils.user_api_keys_checker import validation_user_keys
 
 user_setup_router = Router()
 
-
+@user_setup_router.message(Command('trade'))
 async def user_set_up(message: Message, bot: Bot, state: FSMContext):
     user_id = message.from_user.id
+    text, status = await check_status_of_registration(message)
+    if not status:
+        await message.answer(text)
+        return
     check_api_keys = await validation_user_keys(user_id)
     if not check_api_keys:
         logger.warning(f"Пользователь {user_id}  некоректные ключи")
         await bot.send_message(ADMIN_ID, f'Ошибка в апи ключах {user_id}.')
-        await bot.send_message(user_id, f'Ошибка в апи ключах, сообщите в поддержку @AlisaStrange.')
+        await bot.send_message(user_id, f'Ошибка в апи ключах, сообщите в поддержку @Infinty_Support.')
         return
     await user_start_stop.remove_user(user_id)
     text = ("<b>Управление торговлей:</b>\n"

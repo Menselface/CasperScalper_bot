@@ -29,7 +29,7 @@ async def orders_update(telegram_id, **kwargs):
         return True
     
     except Exception as e:
-        logger.info(e)
+        logger.warning(e)
         return False
 
 
@@ -42,7 +42,7 @@ async def orders_get_any(telegram_id, **kwargs):
             raise ValueError("No fields provided to update")
         
         set_clause = []
-        values = [telegram_id]  # Первый параметр — это telegram_id
+        values = [telegram_id]
         
         for index, (field, value) in enumerate(kwargs.items(), start=2):
             set_clause.append(f"{field}")
@@ -56,7 +56,7 @@ async def orders_get_any(telegram_id, **kwargs):
         return res[set_clause_str]
     
     except Exception as e:
-        logger.info(e)
+        logger.warning(e)
         return False
 
 
@@ -296,7 +296,7 @@ async def get_all_open_sell_orders_nine_btc(user_id: int, status: int, current_p
         return res
     
     except Exception as e:
-        print(f"Error fetching open sell orders: {e}")
+        logger.warning(f"Error fetching open sell orders: {e}")
         return None
 
 

@@ -2,20 +2,20 @@ import asyncio
 
 from aiogram import Bot
 from aiogram.types import Message
-from loguru import logger
 
-from all_mexc_methods.AccountMexc import AccountMexcMethods
-from db import get_access_key, get_secret_key, update_orderafter_sale_by_order_id, get_await_time, get_orders_from_data, \
-    get_info_commission_percent, get_all_open_sell_orders_autobuy_from_any_table
+from services.mexc_api.all_mexc_methods.AccountMexc import AccountMexcMethods
+from db_pack.db import get_access_key, get_secret_key, get_all_open_sell_orders_autobuy_from_any_table
+from db_pack.repositories.trading_repo.any_table import GetOrdersAnyTable, UpdateOrdersAnyTable
+from services.orders_checker import CountOrderCommission
+from services.trading.trading_utils import TradeUtils
 from trading.buy_sell_methods.buy_sell import get_symbol_price
 from trading.buy_sell_methods.buy_sell_sui import BuySellOrders
-from trading.db_querys.db_methods_for_sui import delete_order_by_user_and_order_id_from_any_table_by_symbol, \
-    update_order_by_order_id_any_table
-from trading.db_querys.db_symbols_for_trade_methods import update_start_stop, get_user_symbol_data, \
+from trading.db_querys.db_methods_for_sui import delete_order_by_user_and_order_id_from_any_table_by_symbol
+from trading.db_querys.db_symbols_for_trade_methods import get_user_symbol_data, \
     update_user_symbol_data
 from trading.session_manager import manager_sui
 from utils.additional_methods import create_time, user_message_returner
-from utils.user_api_keys_checker import validation_user_keys
+from utils.logger import TradingLogs, get_user_logger
 from utils.user_buy_total import get_user_buy_sum
 from utils.validate_user_statsus import validate_user_status
 
@@ -24,33 +24,50 @@ async def sui_trader(message: Message, bot: Bot, result: dict = None):
     user_id = message.from_user.id
     user_api_keys = await get_access_key(user_id)
     user_secret_key = await get_secret_key(user_id)
+    symbol_name = "SUIUSDT"
+    logs = TradingLogs(user_id=user_id, symbol=symbol_name)
+    user_logger = get_user_logger(user_id=user_id, symbol=symbol_name)
+    user_logger.info(f"Начал торговлю по {symbol_name}")
+    trade_util = TradeUtils(symbol_name)
+    is_user_expired = await validate_user_status(message, user_id, symbol=symbol_name, manager=manager_sui,
+                                                 bot=bot)
+    user_get_limit_or_balance_message_status = await trade_util.check_message_status_limit_or_balance_for_user(user_id)
     """Есть команда  СТОП?"""
     while True:
-        is_user_expired = await validate_user_status(message, user_id, symbol='SUIUSDT', manager=manager_sui,
-                                                     bot=bot)
         if is_user_expired:
-            await update_user_symbol_data(user_id, "SUIUSDT", start_stop=False)
+            logs.user_expired_and_stop()
             return
-        if result:
+        if result and result["avg_price"] and not user_get_limit_or_balance_message_status:
             avg_price = result["avg_price"]
             actual_order_id = result["actual_order"]
             manager_sui.set_active(user_id)
+            logs.user_automatically_reset(actual_order_id)
+
         else:
+            if await trade_util.if_not_start_stop_at_symbols_for_trade(user_id, manager_sui, logs):
+                return
             manager_sui.set_active(user_id)
-            order_limit_by_user = await get_user_symbol_data(user_id, "SUIUSDT", "order_limit_by")
+            order_limit_by_user = await get_user_symbol_data(user_id, symbol_name, "order_limit_by")
             buy_sell = BuySellOrders(user_id=user_id,
                                      user_secret_key=user_secret_key,
                                      user_api_keys=user_api_keys,
                                      order_limit_by_user=order_limit_by_user,
-                                     symbol="SUIUSDT")
+                                     symbol=symbol_name)
+            logs.set_counter_to_zero()
+            # if user_id == 653500570:
+            #     await notify_admin(user_id, 'Я специально себя остановил', bot, symbol_name)
+            #     manager_sui.delete_user(user_id)
+            #     return
             
             user_balance = AccountMexcMethods(user_api_keys, user_secret_key)
             await user_balance.get_account_info_()
-            sui_limit = await get_user_symbol_data(user_id, "SUIUSDT", "trade_limit")
-            user_buy_stats = await get_user_buy_sum(user_id, "SUIUSDT")
+            sui_limit = await get_user_symbol_data(user_id, symbol_name, "trade_limit")
+            logs.order_limits_by_and_trade_limit_user(order_limit_by_user, sui_limit)
+            user_buy_stats = await get_user_buy_sum(user_id, symbol_name)
             if user_buy_stats + order_limit_by_user >= sui_limit:
-                user_get_limit_message = await get_user_symbol_data(user_id, "SUIUSDT", "limit_message")
+                user_get_limit_message = await get_user_symbol_data(user_id, symbol_name, "limit_message")
                 if user_get_limit_message:
+                    logs.limit_message(minute=True)
                     await asyncio.sleep(60)
                     continue
                 else:
@@ -58,13 +75,15 @@ async def sui_trader(message: Message, bot: Bot, result: dict = None):
                         chat_id=user_id,
                         text=f"Установленный вами лимит по SUI/USDT достиг {sui_limit} USDT\n Вы можете изменить его в /parameters"
                     )
-                    await update_user_symbol_data(user_id, "SUIUSDT", limit_message=1)
+                    logs.limit_message(first=True)
+                    await update_user_symbol_data(user_id, symbol_name, limit_message=1)
                     continue
                 
             
             if user_balance.total_free_usdt <= order_limit_by_user:
-                user_get_message = await get_user_symbol_data(user_id, "SUIUSDT", "info_no_usdt")
+                user_get_message = await get_user_symbol_data(user_id, symbol_name, "info_no_usdt")
                 if user_get_message:
+                    logs.balance_message(minute=True)
                     await asyncio.sleep(60)
                     continue
                 else:
@@ -72,56 +91,74 @@ async def sui_trader(message: Message, bot: Bot, result: dict = None):
                         chat_id=user_id,
                         text="Недостаточно USDT для совершения покупки SUI.\nНастраивается в /parameters."
                     )
-                    await update_user_symbol_data(user_id, "SUIUSDT", info_no_usdt=1)
+                    await update_user_symbol_data(user_id, symbol_name, info_no_usdt=1)
+                    logs.balance_message(first=True)
                     continue
             
             """Покупка по Рынку"""
-            await update_user_symbol_data(user_id, "SUIUSDT", info_no_usdt=0)
-            await update_user_symbol_data(user_id, "SUIUSDT", limit_message=0)
+            await trade_util.reset_user_info_usdt_and_limit_message(user_id)
+            logs.all_limits_messages_reset_to_zero()
+            logs.open_new_order()
             order_buy_id, qnty_for_sell, price_to_sell = await buy_sell.open_market_order_buy(bot=bot)
-            if price_to_sell == "Error 429":
+            dict_data = {"order_id": order_buy_id, "qnty_to_sell" : qnty_for_sell, "price": price_to_sell}
+            logs.return_open_orders_dict_data(dict_data)
+            if await trade_util.check_error_for_sleep_and_restart(user_id, price_to_sell):
+                await asyncio.sleep(10)
                 continue
             if price_to_sell == "critical_error":
-                await update_user_symbol_data(user_id, "SUIUSDT", start_stop=False)
+                await update_user_symbol_data(user_id, symbol_name, start_stop=False)
                 manager_sui.delete_user(user_id)
+                logs.critical_error_after_buying()
                 return
+
             result = await buy_sell.open_limit_order_sell(user_id, order_buy_id, qnty_for_sell, price_to_sell,
                                                                 bot)
+            logs.open_limit_order_result(result)
             if result["critical_error"]:
                 manager_sui.delete_user(user_id)
-                await update_user_symbol_data(user_id, "SUIUSDT", start_stop=False)
+                await update_user_symbol_data(user_id, symbol_name, start_stop=False)
+                logs.critical_error_after_buying(limit=True)
                 return
             avg_price = result["avg_price"]
             actual_order_id = result["actual_order"]
         
         while True:
-            sui_price = await get_symbol_price('SUIUSDT')
-            auto_buy_down_perc = await get_user_symbol_data(user_id, "SUIUSDT", "auto_buy_down_perc")
-            percent_profit = await get_user_symbol_data(user_id, "SUIUSDT", "percent_profit")
+            is_user_expired = await validate_user_status(message, user_id, symbol=symbol_name, manager=manager_sui,
+                                                         bot=bot)
+            if is_user_expired:
+                return
+            sui_price = await get_symbol_price(symbol_name)
+            auto_buy_down_perc = await get_user_symbol_data(user_id, symbol_name, "auto_buy_down_perc")
+            percent_profit = await get_user_symbol_data(user_id, symbol_name, "percent_profit")
             sold_price = avg_price * (1 + percent_profit / 100)
             threshold_price = avg_price * (1 - auto_buy_down_perc / 100)
             await asyncio.sleep(3)
-            start_or_stop = await get_user_symbol_data(user_id, "SUIUSDT", "start_stop")
+            start_or_stop = await get_user_symbol_data(user_id, symbol_name, "start_stop")
             manager_sui.set_active(user_id)
-            
-            if not start_or_stop:
-                await update_user_symbol_data(user_id, "SUIUSDT", start_stop=False)
-                await update_start_stop(user_id, "SUIUSDT", info_no_usdt=0)
-                await update_user_symbol_data(user_id, "SUIUSDT", limit_message=0)
-                manager_sui.delete_user(user_id)
-                logger.info(f"Модуль SUI/USDT остановлен пользователем {user_id}!")
+            trading_data = {
+                'symbol_name': symbol_name,
+                'sui_price': sui_price,
+                'auto_buy_down_perc': auto_buy_down_perc,
+                'percent_profit': percent_profit,
+                'avg_price': avg_price,
+                'sold_price': sold_price,
+                'threshold_price': threshold_price,
+                'start_stop': start_or_stop
+            }
+            logs.get_all_data_in_while_trading_module(trading_data)
+            if await trade_util.if_not_start_stop_at_symbols_for_trade(user_id, manager_sui, logs):
                 return
-            
+
             is_autobuy_was_closed = await orders_checker(message, bot, current_order_id=actual_order_id)
             if is_autobuy_was_closed.get('autobuy_is_closed'):
-                logger.info(f"Пользователь {user_id}: автобай был закрыт, номер - {actual_order_id}")
-                delay_time = await get_await_time(user_id)
+                logs.autobuy_was_closed(actual_order_id)
                 result = None
-                await asyncio.sleep(delay_time)
                 break
             
             if sui_price >= sold_price:
+                await orders_checker(message, bot, current_order_id=actual_order_id)
                 result = None
+                logs.autobuy_was_closed(actual_order_id, overprice=True)
                 break
             
             if float(sui_price) <= float(threshold_price):
@@ -129,6 +166,7 @@ async def sui_trader(message: Message, bot: Bot, result: dict = None):
                     f'🔻 <b>УВЕДОМЛЕНИЕ</b> 🔻 цена\n️SUI упала до {round(threshold_price, 4)} (на {round(auto_buy_down_perc, 2)} % от {round(avg_price, 4)})').as_(
                     bot)
                 result = None
+                logs.price_is_above_threshold(threshold_price)
                 break
             await asyncio.sleep(1)
 
@@ -136,10 +174,12 @@ async def sui_trader(message: Message, bot: Bot, result: dict = None):
 async def orders_checker(message: Message, bot, user_id: int = None, current_order_id: str = None):
     if not user_id:
         user_id = message.from_user.id
+    symbol = "SUIUSDT"
+    update_symbol_orders_table = UpdateOrdersAnyTable()
+    user_logger = get_user_logger(user_id, symbol)
     user_api_keys = await get_access_key(user_id)
     user_secret_key = await get_secret_key(user_id)
     http_mexc = AccountMexcMethods(user_api_keys, user_secret_key)
-    user_commission = await get_info_commission_percent(user_id)
     not_founds = []
     result = {
         'autobuy_is_closed': False,
@@ -147,25 +187,22 @@ async def orders_checker(message: Message, bot, user_id: int = None, current_ord
         '400': not_founds
     }
     
-    user_orders_from_table = await get_all_open_sell_orders_autobuy_from_any_table(user_id, "SUIUSDT", 1)
+    user_orders_from_table = await get_all_open_sell_orders_autobuy_from_any_table(user_id, symbol, 1)
     closed_orders = set()
-    logger.info(
-        f"Пользователь {user_id}: Проверка закрытых ордеров, текуший автобай = {current_order_id}")
     for record in user_orders_from_table:
         try:
-            order = await http_mexc.get_order_status(order_id=record['order_id_limit'], symbol="SUIUSDT")
+            order = await http_mexc.get_order_status(order_id=record['order_id_limit'], symbol=symbol)
             status = order.get('status')
-            logger.info(status)
             if status == 'FILLED':
-                logger.info(f"Данные о закрытом ордере {order}")
+                user_logger.info(f"Данные о закрытом ордере {order}")
                 
                 totalamountonpurchace = record['totalamountonpurchace']
                 order_buy_id = order.get('orderId')
-                logger.info(
+                user_logger.info(
                     f"Пользователь {user_id}: закрыт ордер {order_buy_id}")
                 if current_order_id == order_buy_id:
                     result.update({'autobuy_is_closed': True})
-                    logger.info(
+                    user_logger.info(
                         f"Пользователь {user_id}: закрыт ордер autobuy")
                 
                 time_of_order_sell = await create_time(order.get('updateTime'))
@@ -173,57 +210,58 @@ async def orders_checker(message: Message, bot, user_id: int = None, current_ord
                 price_to_sell = order.get('price')
                 total_after_sale = order.get('origQuoteOrderQty')
                 account_info = await http_mexc.get_account_info_()
-                fee_limit_order = (float(total_after_sale) - float(totalamountonpurchace)) * (
-                            1 - float(user_commission) / 100)
+                fee = await CountOrderCommission(user_id, order_buy_id, symbol).return_commission_total_result()
+
+                fee_limit_order = (float(qnty_for_sell) * float(price_to_sell) - float(totalamountonpurchace) - fee)
                 total_balance_usdt = http_mexc.total_after_sale or 0
                 total_open_trades = len(await http_mexc.get_open_orders()) or 0
                 kaspa_in_orders = http_mexc.total_after_sale_sui or 0
                 total_free_usdt = http_mexc.total_free_usdt or 0
                 
-                await update_order_by_order_id_any_table("SUIUSDT",
-                                                         int(user_id),
-                                                         str(order_buy_id),
-                                                         time_of_order_sell,
-                                                         float(qnty_for_sell),
-                                                         float(price_to_sell),
+                await update_symbol_orders_table.update_order_after_sale_by_order_id_limit(repo=symbol,
+                                                         user_id=int(user_id),
+                                                         order_id=str(order_buy_id),
+                                                         time_of_order_sell=time_of_order_sell,
+                                                         qnty_for_sell=float(qnty_for_sell),
+                                                         price_to_sell=float(price_to_sell),
                                                          order_id_limit=record['order_id_limit'],
                                                          autobuy=2,
-                                                         total_amount_after_sale=total_after_sale,
+                                                         total_amount_after_sale=float(total_after_sale),
                                                          feelimit=fee_limit_order,
                                                          balance_total=total_balance_usdt,
                                                          orders_in_progress=total_open_trades,
-                                                         kaspa_in_orders=kaspa_in_orders,
+                                                         symbol_in_orders=kaspa_in_orders,
                                                          currency_for_trading=total_free_usdt
                                                          )
                 closed_orders.add(order_buy_id)
             if status == 'CANCELED':
-                await delete_order_by_user_and_order_id_from_any_table_by_symbol("SUIUSDT", user_id, current_order_id)
-                logger.info(f"User {user_id} canceled order with status 1 {order}")
+                await delete_order_by_user_and_order_id_from_any_table_by_symbol(symbol, user_id, current_order_id)
+                user_logger.info(f"User {user_id} canceled order with status 1 {order}")
                 result.update({'autobuy_was_cancelled': True})
         
         except Exception as e:
-            logger.info(f"Ордер попал в исключение - {e}")
+            user_logger.info(f"Ордер попал в исключение - {e}")
             continue
         else:
             pass
-    await send_messages_to_user(message, closed_orders, bot)
-    logger.info(f"Пользователю: {user_id} возвращаем {result}")
+    await send_messages_to_user(message, closed_orders, bot, user_logger, symbol)
     return result
 
 
-async def send_messages_to_user(message: Message, orders, bot):
+async def send_messages_to_user(message: Message, orders, bot, user_logger, symbol):
     user_id = message.from_user.id
-    for i in orders:
+    select_any_table = GetOrdersAnyTable()
+    for limit_order_id in orders:
         try:
-            res = await get_orders_from_data(user_id, i)
+            res = await select_any_table.select_id_limit_details_of_order(symbol, limit_order_id, user_id)
             order_buy_id = res['order_id']
             qnty_for_sell = res['qtytosell']
             price_to_sell = res['priceordersell']
             total_after_sale = res['totalamountaftersale']
             fee_limit_order = res['feelimitorder']
-            user_message = user_message_returner(qnty_for_sell, price_to_sell, total_after_sale, fee_limit_order, "SUIUSDT")
+            user_message = user_message_returner(qnty_for_sell, price_to_sell, total_after_sale, fee_limit_order, symbol)
             await message.answer(user_message, parse_mode="HTML").as_(bot)
-            logger.info(f"Отправили сообщение {order_buy_id}")
+            user_logger.info(f"Отправили сообщение {order_buy_id}")
             
         except Exception as e:
-            logger.info(f"Ошибка при отправке сообшения {e}")
+            user_logger.info(f"Ошибка при отправке сообшения {e}")
