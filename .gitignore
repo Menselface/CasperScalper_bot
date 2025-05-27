@@ -6,3 +6,5 @@ __pycache__/
 .logers
 config.py
 test.py
+.vscode
+settings.json

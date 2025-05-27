@@ -1,7 +1,5 @@
 import asyncpg
 
-"""Файл в котором созданы методы для обработки запросов в базу данных"""
-
 
 class DatabaseAsync:
     def __init__(self, dsn):
