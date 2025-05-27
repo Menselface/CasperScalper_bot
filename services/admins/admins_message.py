@@ -4,14 +4,14 @@ import shutil
 from aiogram import Bot
 from aiogram.types import FSInputFile
 
-from db_pack.repositories import GetUsersRepo
+from infrastructure.db_pack.repositories import GetUsersRepo
 from utils.decorators import send_message_safe_call
 
 
 class AdminsMessageService:
     user_repo = GetUsersRepo()
-    temp_log_main_file = f"logs/loggers_сopy.log"
-    temp_log_user_file = f"logs/users"
+    temp_log_main_file = "logs/loggers_сopy.log"
+    temp_log_user_file = "logs/users"
 
     @classmethod
     async def get_all_admins_from_db(cls):
@@ -21,7 +21,7 @@ class AdminsMessageService:
     @classmethod
     @send_message_safe_call(default_return=[])
     async def get_main_logger_file(cls):
-        log_file = f"logs/project.log"
+        log_file = "logs/project.log"
         shutil.copy(log_file, cls.temp_log_main_file)
         return FSInputFile("logs/loggers_сopy.log", filename="loggers_сopy.log")
 

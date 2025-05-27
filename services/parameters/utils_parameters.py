@@ -1,7 +1,5 @@
-import asyncio
-
 from config import PAIR_TABLE_MAP
-from db_pack.repositories.symbols_for_trade import GetSymbolForTradeRepo
+from infrastructure.db_pack.repositories.symbols_for_trade import GetSymbolForTradeRepo
 
 
 class Parameters: ...

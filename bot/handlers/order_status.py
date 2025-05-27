@@ -4,7 +4,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
-from db_pack.db import get_all_open_sell_orders_autobuy_from_any_table
+from infrastructure.db_pack.db import get_all_open_sell_orders_autobuy_from_any_table
 from bot.keyboards.keyboards import (
     PairCallback,
     create_pair_selection_keyboard,

@@ -6,17 +6,20 @@ from aiogram.enums import ParseMode
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from bot import *
-from bot.handlers.start import start_router
+from bot.middlewares.inactive_users import CheckUserActiveMiddleware
+from bot.middlewares.rate_limit import RateLimitMiddleware
+
 from config import TOKEN
 from orders_checker import start_orders_checker
 from services.sessions.session_revival import start_session_revival
 from test_sample import on_startup
+from trading.start_trade import user_start_trade_router
 from utils.additional_methods import identify_myself
 from utils.inactive_users import remove_inactive_users
 from utils.logger import logger
-from utils.middlewares import RateLimitMiddleware, CheckUserActiveMiddleware
 from utils.registration_ending import final_of_registration_date
 from utils.send_and_pin_message import send_and_pin, send_and_pin_month
+from utils.user_setup_symbols import user_setup_router
 
 bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
@@ -31,6 +34,8 @@ dp.include_routers(
     parameters_router,
     price_router,
     start_router,
+    user_start_trade_router,
+    user_setup_router,
     statistic_router,
     subscription_info_router,
 )

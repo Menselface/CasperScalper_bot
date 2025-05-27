@@ -7,7 +7,7 @@ from loguru import logger
 
 from services.mexc_api.all_mexc_methods.AccountMexc import AccountMexcMethods
 from config import PAIR_TABLE_MAP, ADMIN_ID
-from db_pack.db import (
+from infrastructure.db_pack.db import (
     get_access_key,
     get_secret_key,
     update_order_after_sale_by_order_id_any_table,

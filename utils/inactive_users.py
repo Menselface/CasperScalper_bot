@@ -1,9 +1,17 @@
 from loguru import logger
 
-from db_pack.db import delete_inactive_users, insert_to_inactive, get_all_inactive_users, delete_user_from_inactive_table, \
-    user_update, get_inactive_user_by_id_trial_status
-from db_pack.repositories import GetUsersRepo
-from db_pack.repositories.symbols_for_trade import DeleteFromSymbolsForTrade
+from infrastructure.db_pack.db import (
+    delete_inactive_users,
+    insert_to_inactive,
+    get_all_inactive_users,
+    delete_user_from_inactive_table,
+    user_update,
+    get_inactive_user_by_id_trial_status,
+)
+from infrastructure.db_pack.repositories import GetUsersRepo
+from infrastructure.db_pack.repositories.symbols_for_trade import (
+    DeleteFromSymbolsForTrade,
+)
 
 
 async def remove_inactive_users():
@@ -22,6 +30,7 @@ async def check_inactive_user(user_id: int):
     if trial_promo:
         await user_update(user_id, trial_promo=trial_promo)
         await delete_user_from_inactive_table(user_id)
+
 
 async def delete_from_symbols_for_trade_users():
     user_repo = GetUsersRepo()

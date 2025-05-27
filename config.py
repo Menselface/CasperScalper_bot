@@ -1,7 +1,8 @@
 import os
 
-from db_pack.DataBaseAsync import *
 from dotenv import load_dotenv
+
+from infrastructure.db_pack.DataBaseAsync import DatabaseAsync
 
 load_dotenv()
 

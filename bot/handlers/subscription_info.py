@@ -5,7 +5,7 @@ from aiogram.types import Message
 
 from loguru import logger
 
-from db_pack.db import get_registered_to
+from infrastructure.db_pack.db import get_registered_to
 from bot.handlers.start import check_status_of_registration
 
 

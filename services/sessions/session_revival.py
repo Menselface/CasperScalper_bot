@@ -1,17 +1,17 @@
-import asyncio
-
 from aiogram import Bot
 from loguru import logger
 
-from db_pack.repositories.symbols_for_trade import GetSymbolForTradeRepo
+from infrastructure.db_pack.repositories.symbols_for_trade import GetSymbolForTradeRepo
 from services.admins.admins_message import AdminsMessageService
 from trading.session_manager import (
     UserSessionManager,
+)
+from trading.session_manager import (
     manager_tao,
-    manager_dot,
-    manager_btc,
     manager_sui,
     manager_pyth,
+    manager_dot,
+    manager_btc,
     manager_kaspa,
 )
 
@@ -21,6 +21,14 @@ class SessionRevive: ...
 
 class SessionInspector(SessionRevive):
     SYMBOL_MAP = {"kaspa": "KASUSDT", "btc": "BTCUSDC"}
+    sessions = [
+        manager_tao,
+        manager_sui,
+        manager_pyth,
+        manager_dot,
+        manager_btc,
+        manager_kaspa,
+    ]
 
     @classmethod
     def get_active_symbols_for_user(cls, user_id: int):
@@ -40,7 +48,6 @@ class SessionInspector(SessionRevive):
 
     @staticmethod
     async def return_inactive_sessions() -> dict[int, list[str]]:
-
         symbols_for_trade_repo = GetSymbolForTradeRepo()
         db_data = await symbols_for_trade_repo.get_users_with_active_symbols()
         db_users = list(db_data.keys())

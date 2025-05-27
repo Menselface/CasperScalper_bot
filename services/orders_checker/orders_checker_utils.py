@@ -1,6 +1,6 @@
 from loguru import logger
 
-from db_pack.repositories.trading_repo.any_table import GetOrdersAnyTable
+from infrastructure.db_pack.repositories.trading_repo import GetOrdersAnyTable
 from services.mexc_api.get import GetMexcAPI
 from utils.decorators import handle_commission_errors
 

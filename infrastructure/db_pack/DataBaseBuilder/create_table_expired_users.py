@@ -1,6 +1,6 @@
 import asyncio
 
-from db_pack.base import BaseRepositories
+from infrastructure.db_pack.base import BaseRepositories
 
 db_async = BaseRepositories().pool
 
@@ -30,6 +30,7 @@ create_table_query = """
         trial_promo BOOLEAN DEFAULT FALSE
     );
     """
+
 
 async def main():
     await db_async.connect()

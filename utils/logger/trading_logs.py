@@ -1,6 +1,5 @@
 from typing import Any
 
-from utils.logger import logger
 
 
 class TradingLogs:
@@ -34,7 +33,7 @@ class TradingLogs:
         self._log(templates, not (first or minute))
 
     def user_expired_and_stop(self):
-        text = f"Модуль остановлен для пользователя - Закончилась подписка"
+        text = "Модуль остановлен для пользователя - Закончилась подписка"
         self._log(text)
 
     def user_automatically_reset(self, order_id: str):
@@ -52,8 +51,8 @@ class TradingLogs:
         self._log(text)
 
     def critical_error_after_buying(self, limit: bool = False):
-        text = (f"Торговля остановлена: критическая ошибка после выставления лимитной покупки" if limit else
-        f"Торговля остановлена: критическая ошибка после покупки")
+        text = ("Торговля остановлена: критическая ошибка после выставления лимитной покупки" if limit else
+        "Торговля остановлена: критическая ошибка после покупки")
         self._log(text, is_warning=True)
 
     def all_limits_messages_reset_to_zero(self):
@@ -82,7 +81,7 @@ class TradingLogs:
         self._log(text)
 
     def trading_was_stop_by_user(self):
-        text = f"Модуль SUI/USDT остановлен пользователем !"
+        text = "Модуль SUI/USDT остановлен пользователем !"
         self._log(text)
 
     def autobuy_was_closed(self, actual_order_id: str, overprice: bool = False):

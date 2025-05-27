@@ -1,6 +1,4 @@
-import asyncio
-
-from db_pack.repositories import GetUsersRepo
+from infrastructure.db_pack.repositories import GetUsersRepo
 
 
 class BaseMexcAPI:

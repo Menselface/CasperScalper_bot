@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from loguru import logger
 
-from db_pack.db import (
+from infrastructure.db_pack.db import (
     is_admin_checker,
     set_reset_autobuy,
     get_all_id_with_registered_to_status,
@@ -26,7 +26,7 @@ admin_router = Router(name=__name__)
 async def handle_admin(message: Message, bot: Bot, state: FSMContext):
     user_id = message.from_user.id
     all_admins = await is_admin_checker(user_id)
-    if not user_id in all_admins:
+    if user_id not in all_admins:
         return
 
     mes = await message.answer("Привет админ ✌️", reply_markup=admin_keyboard())
@@ -61,7 +61,7 @@ async def refresh_all_users(message: Message, bot: Bot, state: FSMContext):
     all_admins = await is_admin_checker(user_id)
     result = await state.get_data()
     message_to_edit = result.get("message")
-    if not user_id in all_admins:
+    if user_id not in all_admins:
         return
     await bot.edit_message_text(
         chat_id=user_id,
@@ -75,7 +75,7 @@ async def refresh_all_users(message: Message, bot: Bot, state: FSMContext):
 async def refresh_all_users(message: Message, bot: Bot):
     user_id = message.from_user.id
     all_admins = await is_admin_checker(user_id)
-    if not user_id in all_admins:
+    if user_id not in all_admins:
         return
     active_users_btc = manager_btc.sessions
     active_users_kaspa = manager_kaspa.sessions
@@ -107,7 +107,7 @@ async def refresh_all_users(message: Message, bot: Bot):
 async def rstart_autobuy(message: Message, bot: Bot):
     user_id = message.from_user.id
     all_admins = await is_admin_checker(user_id)
-    if not user_id in all_admins:
+    if user_id not in all_admins:
         return
     await bot.send_message(user_id, "Колбаса сработала - 👍 Бот запущен !")
 
@@ -127,7 +127,7 @@ async def get_logs(message: Message, bot: Bot):
 async def go_work_command(message: types.Message, bot: Bot, command: CommandObject):
     user_id = message.from_user.id
     all_admins = await is_admin_checker(user_id)
-    if not user_id in all_admins:
+    if user_id not in all_admins:
         return
     today = datetime.today().date()
     active = today - timedelta(days=11)
@@ -146,7 +146,7 @@ async def go_work_command(message: types.Message, bot: Bot, command: CommandObje
     else:
         message_text = arg.strip()
         header = "‼️‼️‼️‼️‼️‼️‼️‼️‼️‼️‼️‼️"
-        result_msg = f"{header}\n\n{message_text}\n\nПоддержка 👉 @Infinty_Support"
+        result_msg = f"{header}\n\n{message_text}\n\nПоддержка 👉 @"
         for user in all_users:
             try:
                 await bot.send_message(user, result_msg)
@@ -172,7 +172,7 @@ async def go_work_command(message: types.Message, bot: Bot, command: CommandObje
 async def go_work_command(message: types.Message, bot: Bot, command: CommandObject):
     user_id = message.from_user.id
     all_admins = await is_admin_checker(user_id)
-    if not user_id in all_admins:
+    if user_id not in all_admins:
         return
     arg = command.args
     if not arg:

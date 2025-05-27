@@ -45,7 +45,7 @@ async def params_choice_symbol(user_id: int):
         )
 
     keyboard.button(
-        text=f"Все пары",
+        text="Все пары",
         callback_data=ParamsMyCallbackSymbol(level=1, action="all_pairs").pack(),
     )
     keyboard.adjust(1)
@@ -83,7 +83,7 @@ async def params_keyboard(user_id, symbol, for_everything: bool = False):
             )
         if autobuy_down_percent == 1000:
             keyboard.button(
-                text=f"Процент при падении – откл. 🚫",
+                text="Процент при падении – откл. 🚫",
                 callback_data=ParamsMyCallbackSymbol(
                     level=1, action=f"set_autobuy_down_{symbol}"
                 ).pack(),
@@ -101,29 +101,29 @@ async def params_keyboard(user_id, symbol, for_everything: bool = False):
                 level=1, action=f"reset_settings_{symbol}"
             ).pack(),
         )
-        keyboard.button(text=f"🔙", callback_data="cancel_to_parametrs")
+        keyboard.button(text="🔙", callback_data="cancel_to_parametrs")
     else:
         symbol = "everything"
         keyboard.button(
-            text=f"Размер ордера USDT",
+            text="Размер ордера USDT",
             callback_data=ParamsMyCallbackSymbol(
                 level=1, action=f"set_order_limit_{symbol}"
             ).pack(),
         )
         keyboard.button(
-            text=f"Процент прибыли  %",
+            text="Процент прибыли  %",
             callback_data=ParamsMyCallbackSymbol(
                 level=1, action=f"set_profit_percent_{symbol}"
             ).pack(),
         )
         keyboard.button(
-            text=f"Процент при падении %",
+            text="Процент при падении %",
             callback_data=ParamsMyCallbackSymbol(
                 level=1, action=f"set_autobuy_down_{symbol}"
             ).pack(),
         )
         keyboard.button(
-            text=f"Лимит на покупку монеты",
+            text="Лимит на покупку монеты",
             callback_data=ParamsMyCallbackSymbol(
                 level=1, action=f"limit_of_trading_{symbol}"
             ).pack(),
@@ -134,7 +134,7 @@ async def params_keyboard(user_id, symbol, for_everything: bool = False):
                 level=1, action=f"reset_settings_{symbol}"
             ).pack(),
         )
-        keyboard.button(text=f"🔙", callback_data="cancel_to_parametrs")
+        keyboard.button(text="🔙", callback_data="cancel_to_parametrs")
 
     keyboard.adjust(1)
 
@@ -143,8 +143,8 @@ async def params_keyboard(user_id, symbol, for_everything: bool = False):
 
 async def user_autobuy_down_keyboard_off():
     keyboard = InlineKeyboardBuilder()
-    keyboard.button(text=f"Отключить автопадение", callback_data="autobuy_off")
-    keyboard.button(text=f"🔙", callback_data="cancel_to_parametrs")
+    keyboard.button(text="Отключить автопадение", callback_data="autobuy_off")
+    keyboard.button(text="🔙", callback_data="cancel_to_parametrs")
     keyboard.adjust(1)
     return keyboard.as_markup()
 
@@ -207,11 +207,11 @@ async def user_set_up_keyboard(user_id):
     )
 
     builder.button(
-        text=f"👉 ПОДТВЕРДИТЬ 👈",
+        text="👉 ПОДТВЕРДИТЬ 👈",
         callback_data=StartTrade(level=1, action="start_trade").pack(),
     )
     builder.button(
-        text=f"ВЫХОД", callback_data=UserSymbolsConfig(level=1, action="exit").pack()
+        text="ВЫХОД", callback_data=UserSymbolsConfig(level=1, action="exit").pack()
     )
     builder.adjust(1)
     return builder.as_markup()
@@ -220,7 +220,7 @@ async def user_set_up_keyboard(user_id):
 async def trading_set():
     builder = InlineKeyboardBuilder()
     builder.button(
-        text=f"Управление торговлей",
+        text="Управление торговлей",
         callback_data=UserSymbolsConfig(level=1, action="trading_set").pack(),
     )
     builder.adjust(1)
@@ -229,33 +229,33 @@ async def trading_set():
 
 async def back_keyboard():
     keyboard = InlineKeyboardBuilder()
-    keyboard.button(text=f"🔙", callback_data="cancel_to_parametrs")
+    keyboard.button(text="🔙", callback_data="cancel_to_parametrs")
     return keyboard.as_markup()
 
 
 async def yes_no_keyboard():
     keyboard = InlineKeyboardBuilder()
-    keyboard.button(text=f"Да", callback_data="yes_callback")
-    keyboard.button(text=f"Нет", callback_data="cancel_to_parametrs")
+    keyboard.button(text="Да", callback_data="yes_callback")
+    keyboard.button(text="Нет", callback_data="cancel_to_parametrs")
     return keyboard.as_markup()
 
 
 def admin_keyboard(level: int = 0):
     keyboard = InlineKeyboardBuilder()
     if level == 0:
-        keyboard.button(text=f"1.ОБНОВИТЬСЯ", callback_data="refreshing")
-        keyboard.button(text=f"Получить последний лог", callback_data="get_logs")
+        keyboard.button(text="1.ОБНОВИТЬСЯ", callback_data="refreshing")
+        keyboard.button(text="Получить последний лог", callback_data="get_logs")
     if level == 1:
-        keyboard.button(text=f"1.Обновить", callback_data="refresh")
-        keyboard.button(text=f"2.Колбаса", callback_data="restart")
-        keyboard.button(text=f"🔙", callback_data="back_to_admin")
+        keyboard.button(text="1.Обновить", callback_data="refresh")
+        keyboard.button(text="2.Колбаса", callback_data="restart")
+        keyboard.button(text="🔙", callback_data="back_to_admin")
     keyboard.adjust(1)
     return keyboard.as_markup()
 
 
 def trial_keyboard():
     keyboard = InlineKeyboardBuilder()
-    keyboard.button(text=f"Тестовый период 7 дней", callback_data="set_trial_promo")
+    keyboard.button(text="Тестовый период 7 дней", callback_data="set_trial_promo")
     keyboard.adjust(1)
     return keyboard.as_markup()
 

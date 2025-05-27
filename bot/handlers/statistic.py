@@ -15,7 +15,7 @@ from utils.calendar_ import (
 )
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from db_pack.db import get_all_open_sell_orders_autobuy_from_any_table
+from infrastructure.db_pack.db import get_all_open_sell_orders_autobuy_from_any_table
 
 statistic_router = Router()
 

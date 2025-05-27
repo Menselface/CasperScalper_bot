@@ -6,7 +6,11 @@ from loguru import logger
 from openpyxl import Workbook
 
 from config import PAIR_TABLE_MAP, ADMIN_ID, ADMIN_ID2
-from db_pack.db import get_all_id_with_registered_to_status, get_first_message, user_get_any
+from infrastructure.db_pack.db import (
+    get_all_id_with_registered_to_status,
+    get_first_message,
+    user_get_any,
+)
 from bot.handlers.statistic import TradeStatistics
 
 
@@ -18,18 +22,35 @@ class AdminTradeStatistics(TradeStatistics):
 
         stats = {
             "day": {"date": day_str, "data": {}, "total": {"count": 0, "profit": 0.0}},
-            "month": {"date": month_str, "data": {}, "total": {"count": 0, "profit": 0.0}},
-            "all_time": {"data": {}, "total": {"count": 0, "profit": 0.0}}
+            "month": {
+                "date": month_str,
+                "data": {},
+                "total": {"count": 0, "profit": 0.0},
+            },
+            "all_time": {"data": {}, "total": {"count": 0, "profit": 0.0}},
         }
 
         for pair, trades in all_data.items():
-            day_count, day_profit = self._calculate_statistics_for_period(trades, day_str, "day")
-            month_count, month_profit = self._calculate_statistics_for_period(trades, month_str, "month")
+            day_count, day_profit = self._calculate_statistics_for_period(
+                trades, day_str, "day"
+            )
+            month_count, month_profit = self._calculate_statistics_for_period(
+                trades, month_str, "month"
+            )
             all_count, all_profit = await self.get_all_period(trades)
 
-            stats["day"]["data"][pair] = {"count": day_count, "profit": round(day_profit, 2)}
-            stats["month"]["data"][pair] = {"count": month_count, "profit": round(month_profit, 2)}
-            stats["all_time"]["data"][pair] = {"count": all_count, "profit": round(all_profit, 2)}
+            stats["day"]["data"][pair] = {
+                "count": day_count,
+                "profit": round(day_profit, 2),
+            }
+            stats["month"]["data"][pair] = {
+                "count": month_count,
+                "profit": round(month_profit, 2),
+            }
+            stats["all_time"]["data"][pair] = {
+                "count": all_count,
+                "profit": round(all_profit, 2),
+            }
 
             stats["day"]["total"]["count"] += day_count
             stats["day"]["total"]["profit"] += day_profit
@@ -39,6 +60,7 @@ class AdminTradeStatistics(TradeStatistics):
             stats["all_time"]["total"]["profit"] += all_profit
 
         return stats
+
 
 async def get_statistic_for_admin(bot):
     today = datetime.today().date()
@@ -51,12 +73,16 @@ async def get_statistic_for_admin(bot):
         res = await get_first_message(user)
         user_id = res.from_user.id
         try:
-            id_ = await user_get_any(user_id, id='id')
-            user_name = await user_get_any(user_id, username='username')
+            id_ = await user_get_any(user_id, id="id")
+            user_name = await user_get_any(user_id, username="username")
             if user_name == "Нет":
-                user_name = await user_get_any(user_id, first_name='first_name')
-            date_of_registration = await user_get_any(user_id, registered_at='registered_at')
-            end_of_subscription = await user_get_any(user_id, registered_to='registered_to')
+                user_name = await user_get_any(user_id, first_name="first_name")
+            date_of_registration = await user_get_any(
+                user_id, registered_at="registered_at"
+            )
+            end_of_subscription = await user_get_any(
+                user_id, registered_to="registered_to"
+            )
 
             stats_instance = AdminTradeStatistics(user_id, PAIR_TABLE_MAP)
             user_stats = await stats_instance.get_statistics_for_admin(yesterday)
@@ -66,15 +92,16 @@ async def get_statistic_for_admin(bot):
                 "username": user_name,
                 "registered_at": date_of_registration.strftime("%d.%m.%Y"),
                 "registered_to": end_of_subscription.strftime("%d.%m.%Y"),
-                "orders": user_stats
+                "orders": user_stats,
             }
             logger.info(f"Статистика для пользователя {user_id} сформирована.")
         except Exception as e:
-            logger.warning(f"Ошибка при формировании статистики для пользователя {user}: {e}")
+            logger.warning(
+                f"Ошибка при формировании статистики для пользователя {user}: {e}"
+            )
 
     await generate_excel_file(admin_data, yesterday)
     await send_excel_to_admins(bot, yesterday)
-
 
 
 async def generate_excel_file(admin_data: dict, today: datetime.date):
@@ -98,10 +125,12 @@ async def generate_excel_file(admin_data: dict, today: datetime.date):
             info["id"],
             info["username"],
             info["registered_at"],
-            info["registered_to"]
+            info["registered_to"],
         ]
 
-        for period, sheet in zip(["day", "month", "all_time"], [day_sheet, month_sheet, all_time_sheet]):
+        for period, sheet in zip(
+            ["day", "month", "all_time"], [day_sheet, month_sheet, all_time_sheet]
+        ):
             stats = info["orders"][period]
             row = base_data.copy()
 
@@ -129,7 +158,6 @@ async def generate_excel_file(admin_data: dict, today: datetime.date):
     logger.info(f"Excel файл сохранен: {filename}")
 
 
-
 async def send_excel_to_admins(bot, today: datetime.date):
     admin_ids = [ADMIN_ID, ADMIN_ID2]
 
@@ -147,7 +175,7 @@ async def send_excel_to_admins(bot, today: datetime.date):
                     chat_id=admin,
                     document=file_to_send,
                     caption="Статистика 📊",
-                    disable_notification=True
+                    disable_notification=True,
                 )
                 logger.info(f"Excel файл успешно отправлен админу {admin}")
             except Exception as e:

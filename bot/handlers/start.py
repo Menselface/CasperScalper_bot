@@ -1,15 +1,27 @@
-from datetime import datetime
+import json
+import datetime
 
 from aiogram import Router, Bot, F, types
 from aiogram.filters import StateFilter, Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
+from aiogram.types import Message
 from aiogram.utils.serialization import deserialize_telegram_object_to_python
 
-from config import ADMIN_ID, ADMIN_ID2
-from db_pack.db import *
-from db_pack.repositories.users import UpdateUserRepo
+from infrastructure.db_pack.db import (
+    add_user,
+    user_exist,
+    get_access_key,
+    get_timestamp_of_registration,
+    user_get_any,
+    user_update,
+    set_access_key,
+    set_secret_key,
+    get_timestamp_end_registration,
+)
+from infrastructure.db_pack.repositories.users import UpdateUserRepo
 from bot.keyboards.keyboards import trial_keyboard
+from services.admins.admins_message import AdminsMessageService
 from utils.decorators import send_message_safe_call
 from utils.inactive_users import check_inactive_user
 from utils.user_api_keys_checker import validation_user_keys
@@ -57,8 +69,7 @@ async def handle_start(message: Message, bot: Bot):
             f"Имя пользователя: {username}"
         )
         await message.answer(text, parse_mode="HTML", reply_markup=trial_keyboard())
-        await bot.send_message(ADMIN_ID, admin_message, parse_mode="HTML")
-        await bot.send_message(ADMIN_ID2, admin_message, parse_mode="HTML")
+        await AdminsMessageService().send_to_all_admins_message_text(admin_message)
     else:
         timestamp = await get_timestamp_of_registration(user_id)
         user_message = f"Привет, {first_name}.\nВы уже зарегистрированы {timestamp}"
@@ -82,14 +93,7 @@ async def handle_registration(message: Message, state: FSMContext):
     text, status_of_expired = await check_status_of_registration(message)
     if not status_of_expired:
         await message.answer(
-            "Добро пожаловать. Следуйте инструкции ниже:\n\n"
-            "Зарегистрируйтесь на бирже (вот реферал для скидок на комиссию <code>1bHjG</code>). "
-            "Жмите для регистрации 👉<a href='https://www.mexc.com/register?inviteCode=1bHjG'>MEXC.COM</a>\n\n"
-            "Сгенерируйте на бирже MEXC.COM в своем личном кабинете API ключи "
-            "<a href='https://telegra.ph/Kak-sozdat-API-klyuchi-na-birzhe-MEXC-10-24'> ➡️[подробная инструкция]</a>\n\n"
-            "IP адреса для создания API ключей ⬇️\n"
-            "<code>213.200.60.139,91.211.249.232,128.140.77.145,116.203.130.92</code>\n\n"
-            "⬆️ нажми чтобы скопировать ⬆️\n\n Возникли вопросы? Пишите в поддержку: @Infinty_Support ",
+            "Добро пожаловать. Следуйте инструкции ниже:\n\n",
             parse_mode="HTML",
             disable_web_page_preview=True,
         )
@@ -117,7 +121,7 @@ async def set_trial_for_user(
         )
         return
     today = datetime.datetime.now()
-    trial_period = (today + timedelta(days=7)).replace(
+    trial_period = (today + datetime.timedelta(days=7)).replace(
         hour=23, minute=59, second=0, microsecond=0
     )
     await user_update(user_id, registered_to=trial_period)
@@ -147,11 +151,8 @@ async def handle_secret_key(message: Message, state: FSMContext, bot: Bot):
         admin_message = (
             f"Пользователь @{username} ввел некоректные ключи при регистрации"
         )
-        await bot.send_message(
-            user_id, f"Ошибка в апи ключах, сообщите в поддержку @Infinty_Support."
-        )
-        await bot.send_message(ADMIN_ID, admin_message, parse_mode="HTML")
-        await bot.send_message(ADMIN_ID2, admin_message, parse_mode="HTML")
+        await bot.send_message(user_id, "Ошибка в апи ключах, сообщите в поддержку @.")
+        await AdminsMessageService().send_to_all_admins_message_text()
     else:
         await message.answer(text, parse_mode="HTML")
 
@@ -166,27 +167,17 @@ async def check_status_of_registration(message: Message) -> tuple[str, bool]:
     timestamp = await get_timestamp_of_registration(user_id)
     date_time = datetime.datetime.now()
     date_time = date_time.replace(second=0, microsecond=0)
-    user_message2 = (
-        f"Привет, {message.from_user.first_name}.\n\n"
-        f"<b>Полная информация по боту:</b>\n"
-        f"- в телеграмм <a href='https://t.me/KnyazeffCrypto/63'>[ЗДЕСЬ]</a>\n"
-        f"- инструкция по регистрации: <a href='https://telegra.ph/Kak-nachat-torgovat-s-pomoshchyu-Bota-10-26'>[Как начать]</a>\n\n"
-        f"<b>Подключи тестовый период к боту на СЕМЬ ДНЕЙ❗ как новый пользователь</b>\n\n"
-        f"По любым вопросам пиши в поддержку: <a href='https://t.me/Infinty_Support'>@Infinty_Support</a>\n\n"
-        f"«Я осознаю все риски торговли криптовалютой, принимаю их на себя и понимаю, что могу стать холдером криптовалюты»\n"
-        f"Активируя тестовый период, я подтверждаю своё согласие и готов торговать с помощью Бота\n"
-        f"⬇️⬇️⬇️\n\n"
-    )
+    user_message2 = (f"Привет, {message.from_user.first_name}.\n\n",)
 
     if not expired_timestamp:
         return f"<b>Infinity Bot Pro</b>\n\n{user_message2}", False
     elif expired_timestamp < date_time:
         return (
-            f"Ваша регистрация закончилась – Зарегистрирован до: {expired_timestamp}\nСвяжитесь с поддержкой ➡️ @Infinty_Support\n\n<b>После ПОДТВЕРЖДЕНИЯ оплаты, жми ➡️  /registration  ⬅️</b>\n",
+            f"Ваша регистрация закончилась – Зарегистрирован до: {expired_timestamp}\nСвяжитесь с поддержкой ➡️ @\n\n<b>После ПОДТВЕРЖДЕНИЯ оплаты, жми ➡️  /registration  ⬅️</b>\n",
             False,
         )
     else:
         return (
-            f"<b>Регистрация до – {expired_timestamp}</b>\n\nПополните свой спотовый счёт на Mexc.com USDT для торговли.\n\nНачинайте, торговать:\nМеню - /parameters и СТАРТ - /trade\n\nЕсть вопросы? Пиши в поддержку: @Infinty_Support",
+            f"<b>Регистрация до – {expired_timestamp}</b>\n\nПополните свой спотовый счёт на Mexc.com USDT для торговли.\n\nНачинайте, торговать:\nМеню - /parameters и СТАРТ - /trade\n\nЕсть вопросы? Пиши в поддержку: @",
             True,
         )

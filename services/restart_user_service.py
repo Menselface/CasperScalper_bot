@@ -3,7 +3,7 @@ import asyncio
 from aiogram import Bot
 from loguru import logger
 
-from db_pack.repositories import GetUsersRepo
+from infrastructure.db_pack.repositories import GetUsersRepo
 from services.admins.admins_message import AdminsMessageService
 
 

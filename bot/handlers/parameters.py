@@ -58,7 +58,7 @@ async def handle_parameters_choice_symbol(
         logger.warning(f"Пользователь {user_id}  некоректные ключи")
         await bot.send_message(ADMIN_ID, f"Ошибка в апи ключах {user_id}.")
         await bot.send_message(
-            user_id, f"Ошибка в апи ключах, сообщите в поддержку @Infinty_Support."
+            user_id, "Ошибка в апи ключах, сообщите в поддержку @Infinty_Support."
         )
         return
     for symbol in PAIR_TABLE_MAP.keys():
@@ -105,7 +105,7 @@ async def user_choice_symbol_in_params(
     if action.startswith("limit_of_trading_"):
         if text_area_symbol == "everything":
             mes = await callback.message.answer(
-                f"Введите лимит покупки для всех пар",
+                "Введите лимит покупки для всех пар",
                 reply_markup=await back_keyboard(),
             )
             await state.update_data(message_id_callback=mes.message_id)
@@ -179,7 +179,7 @@ async def user_choice_symbol_in_params(
     if action == "all_pairs":
         mes = await bot.send_message(
             user_id,
-            f"Настройки торговли для всех пар:",
+            "Настройки торговли для всех пар:",
             reply_markup=await params_keyboard(user_id, symbol, for_everything=True),
         )
         await state.update_data(message_id=mes.message_id)
@@ -446,11 +446,11 @@ async def delete_message(user_id, message_id, bot: Bot):
     if isinstance(message_id, int):
         try:
             await bot.delete_message(user_id, message_id)
-        except ValidationError as ve:
+        except ValidationError:
             pass
-        except TelegramAPIError as tae:
+        except TelegramAPIError:
             pass
-        except Exception as e:
+        except Exception:
             pass
     else:
         pass

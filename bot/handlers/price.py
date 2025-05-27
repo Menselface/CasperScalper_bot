@@ -38,7 +38,7 @@ async def handle_price(message):
                 prices[name] = f"{price:,.3f}"
             elif name == "TAO":
                 prices[name] = f"{price:,.4f}"
-        except Exception as e:
+        except Exception:
             prices[name] = "N/A"
 
     current_time = datetime.datetime.now().strftime("%H:%M:%S")

@@ -25,7 +25,7 @@ async def user_set_up(message: Message, bot: Bot, state: FSMContext):
     if not check_api_keys:
         logger.warning(f"Пользователь {user_id}  некоректные ключи")
         await bot.send_message(ADMIN_ID, f'Ошибка в апи ключах {user_id}.')
-        await bot.send_message(user_id, f'Ошибка в апи ключах, сообщите в поддержку @Infinty_Support.')
+        await bot.send_message(user_id, 'Ошибка в апи ключах, сообщите в поддержку @Infinty_Support.')
         return
     await user_start_stop.remove_user(user_id)
     text = ("<b>Управление торговлей:</b>\n"
@@ -75,5 +75,3 @@ async def user_set_up_callbacks(callback: CallbackQuery, callback_data: UserSymb
         reply_markup=new_keyboard
     )
     
-    
-            

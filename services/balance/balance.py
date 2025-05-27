@@ -1,5 +1,5 @@
 from services.mexc_api.all_mexc_methods.AccountMexc import AccountMexcMethods
-from db_pack.db import (
+from infrastructure.db_pack.db import (
     get_access_key,
     get_secret_key,
     get_all_open_sell_orders_autobuy_from_any_table_for_checker,
@@ -68,7 +68,7 @@ class AssetBalance:
         )
 
     def format_for_limit(self):
-        return f"♾️" if self.limit == 1000000 else f"{self.limit}"
+        return "♾️" if self.limit == 1000000 else f"{self.limit}"
 
 
 async def get_balance_data(user_id: int) -> dict:
