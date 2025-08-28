@@ -1,5 +1,5 @@
-import json
 import datetime
+import json
 
 from aiogram import Router, Bot, F, types
 from aiogram.filters import StateFilter, Command
@@ -8,6 +8,7 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message
 from aiogram.utils.serialization import deserialize_telegram_object_to_python
 
+from bot.keyboards.keyboards import trial_keyboard
 from infrastructure.db_pack.db import (
     add_user,
     user_exist,
@@ -20,7 +21,6 @@ from infrastructure.db_pack.db import (
     get_timestamp_end_registration,
 )
 from infrastructure.db_pack.repositories.users import UpdateUserRepo
-from bot.keyboards.keyboards import trial_keyboard
 from services.admins.admins_message import AdminsMessageService
 from utils.decorators import send_message_safe_call
 from utils.inactive_users import check_inactive_user
@@ -56,10 +56,12 @@ async def handle_start(message: Message, bot: Bot):
     if message.from_user.username:
         username = f"@{message.from_user.username}"
 
+    lang = message.from_user.language_code if message.from_user.language_code else "en"
+
     if not await user_exist(user_id):
 
         await add_user(
-            user_id, first_name, last_name, username, date_time, specific_date)
+            user_id, first_name, last_name, username, date_time, specific_date, lang)
         await check_inactive_user(user_id)
         admin_message = (
             f"Новый пользователь зарегистрировался!"

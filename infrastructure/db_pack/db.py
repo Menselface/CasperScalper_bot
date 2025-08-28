@@ -288,18 +288,19 @@ async def delete_user_from_inactive_table(user_id):
         logger.warning(e)
 
 
-async def add_user(user_id, first_name, last_name, username, date_time, specific_date):
+async def add_user(user_id, first_name, last_name, username, date_time, specific_date, lang='en'):
     try:
         if db_async.pool is None:
             await db_async.connect()
         await db_async.execute(
-            """INSERT INTO users (telegram_id, first_name, last_name, username, registered_at, registered_to) VALUES($1, $2, $3, $4, $5, $6)""",
+            """INSERT INTO users (telegram_id, first_name, last_name, username, registered_at, registered_to, lang) VALUES($1, $2, $3, $4, $5, $6, $7)""",
             user_id,
             first_name,
             last_name,
             username,
             date_time,
             specific_date,
+            lang
         )
     except Exception as e:
         logger.warning(e)
