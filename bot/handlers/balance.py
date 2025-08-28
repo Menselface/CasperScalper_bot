@@ -9,7 +9,6 @@ from services.balance import get_balance_data, get_order_data, AssetBalance
 from utils.status_pair_text import set_status_pair_text
 
 balance_router = Router(name=__name__)
-print(__name__)
 
 
 @balance_router.message(Command("balance"))

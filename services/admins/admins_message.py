@@ -16,7 +16,6 @@ class AdminsMessageService:
     @classmethod
     async def get_all_admins_from_db(cls):
         return await cls.user_repo.get_all_admins()
-        # return [653500570]
 
     @classmethod
     @send_message_safe_call(default_return=[])

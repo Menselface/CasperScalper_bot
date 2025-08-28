@@ -59,8 +59,7 @@ async def handle_start(message: Message, bot: Bot):
     if not await user_exist(user_id):
 
         await add_user(
-            user_id, first_name, last_name, username, date_time, specific_date
-        )
+            user_id, first_name, last_name, username, date_time, specific_date)
         await check_inactive_user(user_id)
         admin_message = (
             f"Новый пользователь зарегистрировался!"
@@ -69,18 +68,18 @@ async def handle_start(message: Message, bot: Bot):
             f"Имя пользователя: {username}"
         )
         await message.answer(text, parse_mode="HTML", reply_markup=trial_keyboard())
-        await AdminsMessageService().send_to_all_admins_message_text(admin_message)
+        await AdminsMessageService().send_to_all_admins_message_text(admin_message, bot)
     else:
         timestamp = await get_timestamp_of_registration(user_id)
         user_message = f"Привет, {first_name}.\nВы уже зарегистрированы {timestamp}"
         if not access_key:
             await message.answer(
-                "Для начала регистрации введи /registration", parse_mode="HTML"
-            )
+                "Для начала регистрации введи /registration", parse_mode="HTML")
             return
 
         await bot.send_message(user_id, user_message, parse_mode="HTML")
         await message.answer(text, parse_mode="HTML")
+    await UpdateUserRepo().user_first_message_obj(user_id, message_json)
 
 
 @start_router.message(StateFilter(None), Command("registration"))
@@ -151,8 +150,8 @@ async def handle_secret_key(message: Message, state: FSMContext, bot: Bot):
         admin_message = (
             f"Пользователь @{username} ввел некоректные ключи при регистрации"
         )
-        await bot.send_message(user_id, "Ошибка в апи ключах, сообщите в поддержку @.")
-        await AdminsMessageService().send_to_all_admins_message_text()
+        await bot.send_message(user_id, "Ошибка в апи ключах, сообщите в поддержку @AlisaStrange.")
+        await AdminsMessageService().send_to_all_admins_message_text(admin_message, bot)
     else:
         await message.answer(text, parse_mode="HTML")
 
@@ -167,17 +166,17 @@ async def check_status_of_registration(message: Message) -> tuple[str, bool]:
     timestamp = await get_timestamp_of_registration(user_id)
     date_time = datetime.datetime.now()
     date_time = date_time.replace(second=0, microsecond=0)
-    user_message2 = (f"Привет, {message.from_user.first_name}.\n\n",)
+    user_message2 = (f"Привет, {message.from_user.first_name}.",)
 
     if not expired_timestamp:
-        return f"<b>Infinity Bot Pro</b>\n\n{user_message2}", False
+        return f"<b>KasperScalper</b>\n\n{user_message2}", False
     elif expired_timestamp < date_time:
         return (
-            f"Ваша регистрация закончилась – Зарегистрирован до: {expired_timestamp}\nСвяжитесь с поддержкой ➡️ @\n\n<b>После ПОДТВЕРЖДЕНИЯ оплаты, жми ➡️  /registration  ⬅️</b>\n",
+            f"Ваша регистрация закончилась – Зарегистрирован до: {expired_timestamp}\nСвяжитесь с поддержкой ➡️ @AlisaStrange\n\n<b>После ПОДТВЕРЖДЕНИЯ оплаты, жми ➡️  /registration  ⬅️</b>\n",
             False,
         )
     else:
         return (
-            f"<b>Регистрация до – {expired_timestamp}</b>\n\nПополните свой спотовый счёт на Mexc.com USDT для торговли.\n\nНачинайте, торговать:\nМеню - /parameters и СТАРТ - /trade\n\nЕсть вопросы? Пиши в поддержку: @",
+            f"<b>Регистрация до – {expired_timestamp}</b>\n\nПополните свой спотовый счёт на Mexc.com USDT для торговли.\n\nНачинайте, торговать:\nМеню - /parameters и СТАРТ - /trade\n\nЕсть вопросы? Пиши в поддержку: @AlisaStrange",
             True,
         )

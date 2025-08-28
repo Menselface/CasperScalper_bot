@@ -15,7 +15,8 @@ class RestartUserService:
         logger.info("🔄 Рестарт всех активных пользователей")
         get_users_repo = GetUsersRepo()
         users = await get_users_repo.all_active_id_from_symbols_for_trade()
-        # users = [653500570]
+        if not users:
+            return
 
         tasks = []
         for user in users:

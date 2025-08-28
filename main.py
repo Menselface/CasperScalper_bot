@@ -5,7 +5,17 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from bot import *
+from bot.handlers import (
+    subscription_info_router,
+    admin_router,
+    help_router,
+    price_router,
+    start_router,
+    statistic_router,
+    parameters_router,
+    balance_router,
+    order_status_router
+                        )
 from bot.middlewares.inactive_users import CheckUserActiveMiddleware
 from bot.middlewares.rate_limit import RateLimitMiddleware
 
@@ -38,6 +48,7 @@ dp.include_routers(
     user_setup_router,
     statistic_router,
     subscription_info_router,
+    balance_router
 )
 
 

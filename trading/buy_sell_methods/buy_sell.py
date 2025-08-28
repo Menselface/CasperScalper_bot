@@ -33,7 +33,7 @@ async def get_symbol_price(symbol: str):
             )
             continue
         except httpx.RequestError as req_err:
-            logger.warning(f"Request Error: {req_err}")
+            logger.warning(f"Request Error: {req_err} {response} {symbol}")
             continue
         except httpx.TimeoutException:
             logger.warning("Request timed out.")

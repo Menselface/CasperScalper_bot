@@ -271,21 +271,9 @@ class AccountMexcMethods:
                 response.raise_for_status()
                 return response.json()
             except httpx.RequestError as exc:
-                logger.warning(f"HTTP запрос завершился ошибкой: {exc}")
+                logger.warning(f"HTTP запрос завершился ошибкой: {exc} {response}")
             except httpx.HTTPStatusError as exc:
                 logger.warning(f"Ошибка статуса HTTP: {exc.response.status_code}")
             except ValueError:
                 logger.warning("Ошибка преобразования ответа в JSON")
             return None
-
-#
-# api_key = "mx0vgllmFYv8MhADXd"
-# api_secret = "8fd3b3e356404ef9afa08aab54db262c"
-#
-# async def main():
-#     mexc = AccountMexcMethods(api_key, api_secret, symbol="SUIUSDT")
-#     fee = await mexc.get_commission('C02__554209431253045250062')
-#     print(fee)
-#
-# import asyncio
-# asyncio.run(main())
