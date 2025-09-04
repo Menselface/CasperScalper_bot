@@ -53,7 +53,7 @@ dp.include_routers(
 
 
 async def main():
-    schedule = AsyncIOScheduler(timezone="Europe/Kiev")
+    schedule = AsyncIOScheduler(timezone="Europe/Kyiv")
     bot_info = await bot.get_me()
     logger.log(
         "BOOT", f"Бот @{bot_info.username} id={bot_info.id} {await identify_myself()}"
