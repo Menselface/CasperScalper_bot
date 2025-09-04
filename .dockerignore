@@ -1,0 +1,28 @@
+# виртуалки и пакеты
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.venv/
+venv/
+
+# логи и дампы
+logs/
+*.log
+*.sql
+*.sqlite3
+
+# git
+.git/
+.gitignore
+
+# IDE/сборки
+.vscode/
+.idea/
+*.iml
+dist/
+build/
+
+# env
+.env
